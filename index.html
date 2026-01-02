@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stranger Tasks - Stas</title>
+    <style>
+        /* --- СТИЛИ: ВСЕ ВНУТРИ ДЛЯ НАДЕЖНОСТИ --- */
+        :root {
+            --red: #f41b1b;
+            --dark-red: #8b0000;
+            --bg: #000;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            height: 100%;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Эффект мерцания (Flicker) */
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 22%, 24%, 55% { opacity: 0.5; }
+        }
+
+        .neon-text {
+            color: var(--red);
+            text-shadow: 0 0 10px var(--red), 0 0 20px var(--dark-red);
+            text-transform: uppercase;
+            font-weight: bold;
+            animation: flicker 5s infinite linear;
+        }
+
+        /* Экран входа */
+        #entry-screen {
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 20px;
+        }
+
+        .btn-enter {
+            background: transparent;
+            border: 2px solid var(--red);
+            color: var(--red);
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(244, 27, 27, 0.3);
+            transition: 0.3s;
+            margin-top: 20px;
+        }
+
+        /* Контент приложения */
+        #main-app { display: none; padding: 20px; max-width: 500px; margin: 0 auto; }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5rem; margin: 0; }
+        .header p { font-size: 0.6rem; letter-spacing: 5px; color: var(--dark-red); margin-top: 5px; }
+
+        /* Ввод задачи */
+        .input-group { position: relative; margin-bottom: 30px; }
+        #task-input {
+            width: 100%; background: transparent; border: none;
+            border-bottom: 2px solid var(--dark-red);
+            color: #fff; padding: 10px 0; font-size: 1.2rem;
+            outline: none; transition: 0.3s;
+        }
+        #task-input:focus { border-color: var(--red); }
+
+        /* Список задач */
+        #task-list { list-style: none; padding: 0; margin: 0; }
+        .task-item {
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #222;
+            margin-bottom: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+            cursor: move;
+            transition: 0.2s;
+        }
+        .task-item:active { scale: 1.02; border-color: var(--red); }
+        .task-item.completed { opacity: 0.3; filter: grayscale(1); }
+        .task-item.completed span { text-decoration: line-through; color: #555; }
+
+        .check-box {
+            width: 22px; height: 22px; border: 2px solid var(--dark-red);
+            margin-right: 15px; flex-shrink: 0; cursor: pointer;
+            position: relative;
+        }
+        .completed .check-box { background: var(--red); border-color: var(--red); box-shadow: 0 0 10px var(--red); }
+
+        .task-text { flex-grow: 1; font-size: 1.1rem; color: var(--red); }
+        .delete-btn { color: #333; margin-left: 10px; cursor: pointer; border: none; background: none; font-size: 1.2rem; }
+        .delete-btn:hover { color: var(--red); }
+
+        /* Фоновые помехи */
+        .scanlines {
+            position: fixed; inset: 0; pointer-events: none; z-index: 500;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 3px; opacity: 0.2;
+        }
+
+        /* Индикатор музыки */
+        .radio-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #0a0a0a; padding: 10px; border: 1px solid #1a1a1a;
+            margin-bottom: 20px; font-size: 0.7rem;
+        }
+        #music-toggle { color: var(--red); cursor: pointer; border: 1px solid var(--red); padding: 2px 8px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <!-- ЭКРАН ВХОДА -->
+    <div id="entry-screen">
+        <h1 class="neon-text" style="font-size: 3rem;">Hawkins<br>Lab</h1>
+        <button class="btn-enter" onclick="initApp()">Enter the Void</button>
+        <p style="color: #333; font-size: 0.6rem; margin-top: 30px;">Authorized personnel only</p>
+    </div>
+
+    <!-- ПРИЛОЖЕНИЕ -->
+    <div id="main-app">
+        <div class="header">
+            <h1 class="neon-text">Strange Tasks</h1>
+            <p>Department of Energy</p>
+        </div>
+
+        <div class="radio-bar">
+            <span>STATUS: <span style="color: green;">ENCRYPTED</span></span>
+            <span id="music-toggle" onclick="toggleMusic()">MUSIC: OFF</span>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="task-input" placeholder="New Objective..." onkeydown="if(event.key==='Enter') addTask()">
+        </div>
+
+        <ul id="task-list">
+            <!-- Задачи появятся здесь -->
+        </ul>
+    </div>
+
+    <!-- ЗВУКИ -->
+    <audio id="bg-music" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop></audio>
+
+    <script>
+        // --- ЛОГИКА: ЧИСТЫЙ JS БЕЗ БИБЛИОТЕК ---
+        let tasks = JSON.parse(localStorage.getItem('stas_tasks_final')) || [];
+        const SFX_CLICK = "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3";
+        const SFX_TV = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
+
+        function playSound(src) {
+            try {
+                const a = new Audio(src);
+                a.volume = 0.3;
+                a.play().catch(() => {});
+            } catch(e) {}
+        }
+
+        function initApp() {
+            document.getElementById('entry-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            
+            // Запуск музыки после клика (обязательно для браузера)
+            const music = document.getElementById('bg-music');
+            music.volume = 0.3;
+            music.play().then(() => {
+                document.getElementById('music-toggle').innerText = 'MUSIC: ON';
+            }).catch(e => {
+                console.log("Audio waiting for interaction");
+            });
+
+            renderTasks();
+        }
+
+        function toggleMusic() {
+            const music = document.getElementById('bg-music');
+            const btn = document.getElementById('music-toggle');
+            if (music.paused) {
+                music.play();
+                btn.innerText = 'MUSIC: ON';
+            } else {
+                music.pause();
+                btn.innerText = 'MUSIC: OFF';
+            }
+        }
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            const val = input.value.trim();
+            if (!val) return;
+
+            playSound(SFX_CLICK);
+            tasks.unshift({ id: Date.now(), text: val, completed: false });
+            input.value = '';
+            save();
+        }
+
+        function deleteTask(id, event) {
+            event.stopPropagation();
+            playSound(SFX_TV);
+            tasks = tasks.filter(t => t.id !== id);
+            save();
+        }
+
+        function toggleTask(id) {
+            playSound(SFX_CLICK);
+            tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+            save();
+        }
+
+        function save() {
+            localStorage.setItem('stas_tasks_final', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = '';
+
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.setAttribute('draggable', 'true');
+                li.dataset.index = index;
+
+                li.innerHTML = `
+                    <div class="check-box" onclick="toggleTask(${task.id})"></div>
+                    <span class="task-text" onclick="toggleTask(${task.id})">${task.text}</span>
+                    <button class="delete-btn" onclick="deleteTask(${task.id}, event)">×</button>
+                `;
+
+                // События для Drag and Drop (Нативный JS)
+                li.addEventListener('dragstart', handleDragStart);
+                li.addEventListener('dragover', handleDragOver);
+                li.addEventListener('drop', handleDrop);
+
+                list.appendChild(li);
+            });
+        }
+
+        // --- ПРОСТОЙ DRAG & DROP БЕЗ БИБЛИОТЕК ---
+        let dragSrcEl = null;
+
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (dragSrcEl !== this) {
+                const fromIndex = parseInt(dragSrcEl.dataset.index);
+                const toIndex = parseInt(this.dataset.index);
+                
+                const item = tasks.splice(fromIndex, 1)[0];
+                tasks.splice(toIndex, 0, item);
+                save();
+            }
+            return false;
+        }
+
+    </script>
+</body>
+</html>
+
