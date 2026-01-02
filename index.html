@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stranger Tasks - Stas Edition</title>
+    <!-- Библиотека для перетаскивания (легкая и надежная) -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon: #f41b1b; --neon-glow: #8b0000; }
+        body { 
+            background-color: #000; 
+            color: #fff; 
+            font-family: 'Crimson Text', serif; 
+            margin: 0; 
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Эффект мерцания */
+        .flicker { animation: flicker 4s infinite step-end; }
+        @keyframes flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+            20%, 24%, 55% { opacity: 0.3; }
+        }
+
+        /* Неоновый текст */
+        .neon-title {
+            color: var(--neon);
+            text-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon-glow);
+            letter-spacing: -2px;
+            text-transform: uppercase;
+        }
+
+        /* Сканирующие линии ТВ */
+        .scanlines::before {
+            content: " "; display: block; position: fixed; inset: 0; 
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
+            background-size: 100% 4px; z-index: 100; pointer-events: none; opacity: 0.1;
+        }
+
+        /* Стили карточек */
+        .task-item {
+            background: rgba(15, 15, 15, 0.9);
+            border: 1px solid rgba(244, 27, 27, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: none; /* Важно для SortableJS на мобилах */
+        }
+        .task-item.completed {
+            opacity: 0.3;
+            filter: grayscale(1) blur(0.5px);
+        }
+        .task-item.completed p { text-decoration: line-through; font-style: italic; font-size: 0.9em; color: #666; }
+        
+        /* Перетаскивание (placeholder) */
+        .sortable-ghost { opacity: 0.1; background: var(--neon-glow); }
+
+        /* Кастомный чекбокс */
+        .check-box {
+            width: 24px; height: 24px; border: 2px solid #550000;
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+        }
+        .check-box.active { border-color: var(--neon); box-shadow: 0 0 8px var(--neon); }
+        .check-box.active::after { content: ''; width: 10px; height: 10px; background: var(--neon); box-shadow: 0 0 5px var(--neon); }
+
+        /* Входной экран */
+        #entry-screen {
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .btn-enter {
+            border: 2px solid var(--neon); color: var(--neon);
+            padding: 15px 40px; text-transform: uppercase; font-weight: bold;
+            letter-spacing: 5px; transition: 0.3s;
+        }
+        .btn-enter:active { background: var(--neon); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <!-- ЭКРАН ВХОДА -->
+    <div id="entry-screen">
+        <h1 class="text-6xl md:text-8xl font-bold neon-title mb-10 text-center flicker">Hawkins<br>Lab</h1>
+        <button onclick="startApp()" class="btn-enter shadow-[0_0_20px_rgba(244,27,27,0.3)]">Enter the Void</button>
+    </div>
+
+    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+    <div id="app" class="hidden min-h-screen p-4 md:p-10 max-w-xl mx-auto">
+        <header class="text-center mb-10">
+            <h2 class="text-5xl font-bold neon-title flicker">Strange Tasks</h2>
+            <p class="text-[10px] tracking-[0.6em] text-red-900 uppercase font-black mt-2">Department of Energy</p>
+        </header>
+
+        <!-- ПЛЕЕР -->
+        <div class="flex items-center justify-between bg-zinc-950 border border-red-950 p-4 rounded mb-8">
+            <button id="musicBtn" class="w-10 h-10 rounded-full border border-red-600 flex items-center justify-center text-red-600">
+                OFF
+            </button>
+            <div class="text-[10px] text-red-900 uppercase font-bold text-right leading-tight">
+                Signal: Weak<br>Dimension: Unknown
+            </div>
+        </div>
+
+        <!-- ВВОД ЗАДАЧИ -->
+        <div class="mb-10 relative">
+            <input type="text" id="taskInput" placeholder="New Mission..." 
+                   class="w-full bg-transparent border-b-2 border-red-900 p-4 text-xl focus:outline-none focus:border-red-600 text-red-100 placeholder:text-zinc-900">
+            <button onclick="addTask()" class="absolute right-4 top-1/2 -translate-y-1/2 text-red-600">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+        </div>
+
+        <!-- СПИСОК (Sortable) -->
+        <div id="taskList" class="space-y-4">
+            <!-- Сюда будут падать задачи -->
+        </div>
+
+        <div id="emptyVoid" class="hidden text-center mt-20 opacity-20 flex flex-col items-center">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mb-4"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>
+            <p class="uppercase tracking-widest text-xs font-bold">The Gate is Closed</p>
+        </div>
+    </div>
+
+    <!-- АУДИО -->
+    <audio id="bgMusic" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop></audio>
+
+    <script>
+        const tasks = JSON.parse(localStorage.getItem('stas_tasks')) || [];
+        const SFX_CLICK = "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3";
+        const SFX_TV = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
+
+        function playSound(src) {
+            const a = new Audio(src);
+            a.volume = 0.3;
+            a.play().catch(() => {});
+        }
+
+        function startApp() {
+            document.getElementById('entry-screen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            const music = document.getElementById('bgMusic');
+            music.volume = 0.4;
+            music.play().catch(() => {});
+            document.getElementById('musicBtn').innerText = 'ON';
+            document.getElementById('musicBtn').classList.add('bg-red-600', 'text-black');
+            renderTasks();
+        }
+
+        // Логика плеера
+        document.getElementById('musicBtn').onclick = function() {
+            const music = document.getElementById('bgMusic');
+            if (music.paused) {
+                music.play();
+                this.innerText = 'ON';
+                this.classList.add('bg-red-600', 'text-black');
+            } else {
+                music.pause();
+                this.innerText = 'OFF';
+                this.classList.remove('bg-red-600', 'text-black');
+            }
+        };
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            if (!input.value.trim()) return;
+            
+            playSound(SFX_CLICK);
+            tasks.unshift({
+                id: Date.now(),
+                text: input.value,
+                completed: false
+            });
+            input.value = '';
+            saveAndRender();
+        }
+
+        function toggleTask(id) {
+            playSound(SFX_CLICK);
+            const task = tasks.find(t => t.id === id);
+            if (task) task.completed = !task.completed;
+            saveAndRender();
+        }
+
+        function deleteTask(id) {
+            playSound(SFX_TV);
+            const index = tasks.findIndex(t => t.id === id);
+            tasks.splice(index, 1);
+            saveAndRender();
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('stas_tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList');
+            const empty = document.getElementById('emptyVoid');
+            list.innerHTML = '';
+            
+            if (tasks.length === 0) empty.classList.remove('hidden');
+            else empty.classList.add('hidden');
+
+            tasks.forEach(task => {
+                const div = document.createElement('div');
+                div.className = `task-item p-5 flex items-center gap-4 rounded ${task.completed ? 'completed' : ''}`;
+                div.dataset.id = task.id;
+                div.innerHTML = `
+                    <div class="handle text-zinc-800 cursor-move">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                    </div>
+                    <div onclick="toggleTask(${task.id})" class="check-box ${task.completed ? 'active' : ''}"></div>
+                    <div class="flex-1" onclick="toggleTask(${task.id})">
+                        <p class="text-xl font-bold uppercase tracking-tight ${task.completed ? '' : 'text-red-600 shadow-sm'}">${task.text}</p>
+                    </div>
+                    <button onclick="deleteTask(${task.id})" class="text-zinc-900 hover:text-red-600 p-2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // Инициализация перетаскивания
+        const sortable = new Sortable(document.getElementById('taskList'), {
+            animation: 150,
+            handle: '.handle',
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                // Обновляем массив задач после перетаскивания
+                const newOrderIds = Array.from(document.querySelectorAll('.task-item')).map(el => parseInt(el.dataset.id));
+                const reorderedTasks = newOrderIds.map(id => tasks.find(t => t.id === id));
+                tasks.length = 0;
+                tasks.push(...reorderedTasks);
+                localStorage.setItem('stas_tasks', JSON.stringify(tasks));
+            }
+        });
+
+        // Слушаем Enter в инпуте
+        document.getElementById('taskInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addTask();
+        });
+
+    </script>
+</body>
+</html>
+
