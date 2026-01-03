@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stranger Tasks - Elite Stas Edition</title>
+    <!-- Подключаем SortableJS для идеального drag-and-drop на мобилках -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        :root {
+            --red: #f41b1b;
+            --dark-red: #8b0000;
+            --bg: #000;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            height: 100%;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Эффект мерцания старого экрана */
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 22%, 24%, 55% { opacity: 0.5; }
+        }
+
+        .neon-text {
+            color: var(--red);
+            text-shadow: 0 0 10px var(--red), 0 0 20px var(--dark-red);
+            text-transform: uppercase;
+            font-weight: bold;
+            animation: flicker 5s infinite linear;
+        }
+
+        /* Экран входа */
+        #entry-screen {
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 20px;
+        }
+
+        .btn-enter {
+            background: transparent;
+            border: 2px solid var(--red);
+            color: var(--red);
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            letter-spacing: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(244, 27, 27, 0.4);
+            transition: 0.3s;
+            margin-top: 20px;
+            font-family: serif;
+        }
+        .btn-enter:active { background: var(--red); color: #000; }
+
+        /* Основной интерфейс */
+        #main-app { display: none; padding: 15px; max-width: 500px; margin: 0 auto; padding-bottom: 100px; }
+
+        .header { text-align: center; margin-bottom: 25px; border-top: 4px solid var(--red); border-bottom: 4px solid var(--red); padding: 15px 0; }
+        .header h1 { font-size: 2rem; margin: 0; letter-spacing: -1px; font-family: serif; }
+
+        /* Радио-панель */
+        .radio-deck {
+            background: #080808;
+            border: 1px solid #1a1a1a;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 2px;
+        }
+        .radio-display {
+            font-size: 0.6rem; color: var(--red); font-weight: bold; 
+            text-transform: uppercase; margin-bottom: 10px;
+            display: flex; justify-content: space-between;
+            letter-spacing: 2px;
+        }
+        .channel-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+        .channel-btn {
+            background: #111;
+            border: 1px solid #333;
+            color: #444;
+            padding: 10px 0;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .channel-btn.active {
+            border-color: var(--red);
+            color: var(--red);
+            box-shadow: 0 0 10px rgba(244, 27, 27, 0.4);
+        }
+        .play-toggle {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--red);
+            color: var(--red);
+            padding: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+        }
+        .play-toggle.playing { background: var(--red); color: #000; }
+
+        /* Ввод задач */
+        .input-wrapper { display: flex; gap: 10px; margin-bottom: 30px; }
+        #task-input {
+            flex-grow: 1;
+            background: #0a0a0a;
+            border: none;
+            border-bottom: 2px solid var(--dark-red);
+            color: #fff;
+            padding: 12px;
+            font-size: 1.1rem;
+            outline: none;
+        }
+        #task-input:focus { border-color: var(--red); }
+        .add-btn {
+            background: var(--dark-red);
+            color: #fff;
+            border: none;
+            width: 50px;
+            height: 50px;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+        }
+
+        /* Список задач */
+        .list-container { display: flex; flex-direction: column; }
+        .task-list { list-style: none; padding: 0; margin: 0; min-height: 20px; }
+        
+        .task-item {
+            background: rgba(15, 15, 15, 0.98);
+            border: 1px solid #1a1a1a;
+            margin-bottom: 8px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            border-radius: 2px;
+            touch-action: none; /* Для SortableJS */
+        }
+        
+        /* Текст активных задач — Белый */
+        .task-text { 
+            flex-grow: 1; 
+            font-size: 1.1rem; 
+            color: #ffffff; /* Белый цвет по просьбе Стаса */
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Текст выполненных задач */
+        .task-item.completed {
+            opacity: 0.3;
+            background: #050505;
+            border-color: transparent;
+        }
+        .task-item.completed .task-text {
+            color: #666;
+            text-decoration: line-through;
+            font-style: italic;
+            font-weight: normal;
+        }
+
+        .check-box {
+            width: 24px; height: 24px; border: 2px solid var(--dark-red);
+            margin-right: 15px; flex-shrink: 0; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .completed .check-box { background: var(--red); border-color: var(--red); }
+        .completed .check-box::after { content: 'L'; transform: rotate(45deg) scaleX(-1); color: #000; font-weight: bold; margin-bottom: 4px; }
+
+        .delete-btn { color: #333; margin-left: 10px; cursor: pointer; border: none; background: none; font-size: 1.5rem; }
+        .delete-btn:active { color: var(--red); }
+
+        /* Помехи */
+        .scanlines {
+            position: fixed; inset: 0; pointer-events: none; z-index: 500;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 3px; opacity: 0.2;
+        }
+        
+        /* Стили для перетаскиваемого элемента */
+        .sortable-ghost { opacity: 0.4; background: var(--dark-red); }
+        .sortable-drag { background: #1a1a1a; box-shadow: 0 0 20px var(--red); }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <!-- ЭКРАН ВХОДА -->
+    <div id="entry-screen">
+        <h1 class="neon-text" style="font-size: 3rem; line-height: 1;">Hawkins<br>Elite Hub</h1>
+        <button class="btn-enter" onclick="initApp()">INITIATE SYSTEM</button>
+        <p style="color: #1a1a1a; font-size: 0.7rem; margin-top: 40px; letter-spacing: 3px;">Property of U.S. Govt.</p>
+    </div>
+
+    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+    <div id="main-app">
+        <div class="header">
+            <h1 class="neon-text">Mission Log</h1>
+        </div>
+
+        <!-- РАДИО -->
+        <div class="radio-deck">
+            <div class="radio-display">
+                <span>COMMS FREQUENCY</span>
+                <span id="track-display">OFFLINE</span>
+            </div>
+            <div class="channel-grid">
+                <button class="channel-btn active" onclick="setChannel(0)">1</button>
+                <button class="channel-btn" onclick="setChannel(1)">2</button>
+                <button class="channel-btn" onclick="setChannel(2)">3</button>
+                <button class="channel-btn" onclick="setChannel(3)">4</button>
+                <button class="channel-btn" onclick="setChannel(4)">5</button>
+            </div>
+            <button class="play-toggle" id="play-btn" onclick="toggleAudio()">Start Transmission</button>
+        </div>
+
+        <!-- ВВОД -->
+        <div class="input-wrapper">
+            <input type="text" id="task-input" placeholder="New objective..." onkeydown="if(event.key==='Enter') addTask()">
+            <button class="add-btn" onclick="addTask()">+</button>
+        </div>
+
+        <!-- ДВА СПИСКА ДЛЯ СОРТИРОВКИ -->
+        <div class="list-container">
+            <ul id="active-tasks" class="task-list"></ul>
+            <ul id="completed-tasks" class="task-list" style="margin-top: 20px;"></ul>
+        </div>
+    </div>
+
+    <audio id="audio-player" loop></audio>
+
+    <script>
+        // --- ДАННЫЕ ---
+        let tasks = JSON.parse(localStorage.getItem('stas_tasks_final_elite')) || [];
+        
+        const playlist = [
+            { name: "Cerebro 01", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+            { name: "The Void 02", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+            { name: "Mind Flayer 03", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+            { name: "Laboratory 04", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+            { name: "Eleven's Theme 05", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" }
+        ];
+
+        let currentChannel = 0;
+        const SFX_CLICK = "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3";
+        const SFX_DELETE = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
+
+        function playSFX(src) {
+            const a = new Audio(src);
+            a.volume = 0.2;
+            a.play().catch(() => {});
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ---
+        function initApp() {
+            document.getElementById('entry-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            
+            const player = document.getElementById('audio-player');
+            player.src = playlist[currentChannel].url;
+            player.volume = 0.4;
+            
+            updateAudioUI();
+            renderAll();
+            initDragAndDrop();
+        }
+
+        // --- РАДИО ---
+        function setChannel(idx) {
+            currentChannel = idx;
+            const player = document.getElementById('audio-player');
+            const wasPlaying = !player.paused;
+            player.src = playlist[currentChannel].url;
+            if (wasPlaying) player.play();
+            updateAudioUI();
+            playSFX(SFX_CLICK);
+        }
+
+        function toggleAudio() {
+            const player = document.getElementById('audio-player');
+            const btn = document.getElementById('play-btn');
+            if (player.paused) {
+                player.play();
+                btn.innerText = "Stop Transmission";
+                btn.classList.add('playing');
+            } else {
+                player.pause();
+                btn.innerText = "Start Transmission";
+                btn.classList.remove('playing');
+            }
+        }
+
+        function updateAudioUI() {
+            document.getElementById('track-display').innerText = playlist[currentChannel].name;
+            const btns = document.querySelectorAll('.channel-btn');
+            btns.forEach((b, i) => b.classList.toggle('active', i === currentChannel));
+        }
+
+        // --- ЗАДАЧИ ---
+        function addTask() {
+            const input = document.getElementById('task-input');
+            if (!input.value.trim()) return;
+            
+            playSFX(SFX_CLICK);
+            // Добавляем в конец массива
+            tasks.push({
+                id: Date.now(),
+                text: input.value.trim(),
+                completed: false
+            });
+            input.value = '';
+            save();
+            renderAll();
+        }
+
+        function toggleTask(id) {
+            playSFX(SFX_CLICK);
+            tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+            save();
+            renderAll();
+        }
+
+        function deleteTask(id) {
+            playSFX(SFX_DELETE);
+            tasks = tasks.filter(t => t.id !== id);
+            save();
+            renderAll();
+        }
+
+        function save() {
+            localStorage.setItem('stas_tasks_final_elite', JSON.stringify(tasks));
+        }
+
+        function renderAll() {
+            const activeList = document.getElementById('active-tasks');
+            const completedList = document.getElementById('completed-tasks');
+            
+            activeList.innerHTML = '';
+            completedList.innerHTML = '';
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.dataset.id = task.id;
+                li.innerHTML = `
+                    <div class="check-box" onclick="toggleTask(${task.id})"></div>
+                    <span class="task-text" onclick="toggleTask(${task.id})">${task.text}</span>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">×</button>
+                `;
+                
+                if (task.completed) completedList.appendChild(li);
+                else activeList.appendChild(li);
+            });
+        }
+
+        // --- DRAG & DROP (SORTABLE JS) ---
+        function initDragAndDrop() {
+            const options = {
+                animation: 250,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: () => {
+                    // Пересобираем массив задач на основе нового порядка в DOM
+                    const newTasks = [];
+                    const allItems = document.querySelectorAll('.task-item');
+                    allItems.forEach(item => {
+                        const id = parseInt(item.dataset.id);
+                        const originalTask = tasks.find(t => t.id === id);
+                        if (originalTask) newTasks.push(originalTask);
+                    });
+                    tasks = newTasks;
+                    save();
+                }
+            };
+
+            Sortable.create(document.getElementById('active-tasks'), options);
+            Sortable.create(document.getElementById('completed-tasks'), options);
+        }
+
+    </script>
+</body>
+</html>
+
