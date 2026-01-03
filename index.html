@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stranger Tasks - Stas Elite</title>
+    <style>
+        :root {
+            --red: #f41b1b;
+            --dark-red: #8b0000;
+            --bg: #000;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Georgia', serif;
+            height: 100%;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Эффект мерцания */
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 22%, 24%, 55% { opacity: 0.5; }
+        }
+
+        .neon-text {
+            color: var(--red);
+            text-shadow: 0 0 10px var(--red), 0 0 20px var(--dark-red);
+            text-transform: uppercase;
+            font-weight: bold;
+            animation: flicker 6s infinite linear;
+        }
+
+        /* Экран входа */
+        #entry-screen {
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 20px;
+        }
+
+        .btn-enter {
+            background: transparent;
+            border: 2px solid var(--red);
+            color: var(--red);
+            padding: 15px 35px;
+            font-size: 1.2rem;
+            letter-spacing: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(244, 27, 27, 0.4);
+            transition: 0.3s;
+            margin-top: 20px;
+        }
+
+        /* Приложение */
+        #main-app { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
+
+        .header { text-align: center; margin-bottom: 25px; border-top: 4px solid var(--red); border-bottom: 4px solid var(--red); padding: 10px 0; }
+        .header h1 { font-size: 2.2rem; margin: 0; letter-spacing: -2px; }
+
+        /* Плеер */
+        .radio-box {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 4px;
+        }
+        .track-info { font-size: 0.7rem; color: var(--red); font-weight: bold; text-transform: uppercase; }
+        .player-controls { display: flex; gap: 10px; }
+        .p-btn { background: none; border: 1px solid var(--red); color: var(--red); cursor: pointer; padding: 4px 8px; font-size: 0.7rem; }
+        .p-btn:active { background: var(--red); color: #000; }
+
+        /* Ввод */
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        #task-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--dark-red);
+            color: #fff;
+            padding: 10px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        #task-input:focus { border-color: var(--red); }
+        
+        .add-btn {
+            background: var(--dark-red);
+            color: #fff;
+            border: none;
+            width: 45px;
+            height: 45px;
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+            transition: 0.3s;
+            border-radius: 4px;
+        }
+        .add-btn:active { transform: scale(0.9); background: var(--red); }
+
+        /* Список */
+        #task-list { list-style: none; padding: 0; margin: 0; }
+        .task-item {
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #1a1a1a;
+            margin-bottom: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+        .task-item.completed { opacity: 0.3; filter: grayscale(1); border-color: transparent; }
+        .task-item.completed .task-text { text-decoration: line-through; color: #555; font-style: italic; font-size: 0.9rem; }
+
+        .check-box {
+            width: 22px; height: 22px; border: 2px solid var(--dark-red);
+            margin-right: 15px; flex-shrink: 0; cursor: pointer;
+        }
+        .completed .check-box { background: var(--red); border-color: var(--red); box-shadow: 0 0 8px var(--red); }
+
+        .task-text { flex-grow: 1; font-size: 1.1rem; color: #eee; font-weight: bold; }
+        .delete-btn { color: #333; margin-left: 10px; cursor: pointer; border: none; background: none; font-size: 1.3rem; }
+
+        .scanlines {
+            position: fixed; inset: 0; pointer-events: none; z-index: 500;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 3px; opacity: 0.15;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <!-- ВХОД -->
+    <div id="entry-screen">
+        <h1 class="neon-text" style="font-size: 3.5rem; line-height: 0.9;">Hawkins<br>Notebook</h1>
+        <button class="btn-enter" onclick="initApp()">OPEN PORTAL</button>
+    </div>
+
+    <!-- ОСНОВНОЙ БЛОК -->
+    <div id="main-app">
+        <div class="header">
+            <h1 class="neon-text">STRANGE TASKS</h1>
+        </div>
+
+        <div class="radio-box">
+            <div class="track-info">
+                FREQ: <span id="track-name">HAWKINS THEME</span>
+            </div>
+            <div class="player-controls">
+                <button class="p-btn" onclick="prevTrack()">PREV</button>
+                <button class="p-btn" onclick="toggleMusic()" id="play-btn">PAUSE</button>
+                <button class="p-btn" onclick="nextTrack()">NEXT</button>
+            </div>
+        </div>
+
+        <div class="input-wrapper">
+            <input type="text" id="task-input" placeholder="Mission details..." onkeydown="if(event.key==='Enter') addTask()">
+            <button class="add-btn" onclick="addTask()">+</button>
+        </div>
+
+        <ul id="task-list"></ul>
+    </div>
+
+    <audio id="bg-music" loop></audio>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('stas_tasks_final_v2')) || [];
+        
+        // Плейлист
+        const playlist = [
+            { name: "Hawkins Theme", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+            { name: "The Void", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+            { name: "Upside Down", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+            { name: "Synthwave 84", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" }
+        ];
+        let currentTrack = 0;
+
+        const SFX_CLICK = "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3";
+        const SFX_TV = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
+
+        function playSound(src) {
+            const a = new Audio(src);
+            a.volume = 0.2;
+            a.play().catch(() => {});
+        }
+
+        function initApp() {
+            document.getElementById('entry-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            
+            const music = document.getElementById('bg-music');
+            music.src = playlist[currentTrack].url;
+            music.volume = 0.3;
+            music.play().then(() => {
+                document.getElementById('play-btn').innerText = 'PAUSE';
+            }).catch(() => {
+                document.getElementById('play-btn').innerText = 'PLAY';
+            });
+            
+            updateTrackDisplay();
+            renderTasks();
+        }
+
+        function updateTrackDisplay() {
+            document.getElementById('track-name').innerText = playlist[currentTrack].name;
+        }
+
+        function toggleMusic() {
+            const music = document.getElementById('bg-music');
+            const btn = document.getElementById('play-btn');
+            if (music.paused) {
+                music.play();
+                btn.innerText = 'PAUSE';
+            } else {
+                music.pause();
+                btn.innerText = 'PLAY';
+            }
+        }
+
+        function nextTrack() {
+            currentTrack = (currentTrack + 1) % playlist.length;
+            const music = document.getElementById('bg-music');
+            music.src = playlist[currentTrack].url;
+            music.play();
+            updateTrackDisplay();
+            document.getElementById('play-btn').innerText = 'PAUSE';
+        }
+
+        function prevTrack() {
+            currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
+            const music = document.getElementById('bg-music');
+            music.src = playlist[currentTrack].url;
+            music.play();
+            updateTrackDisplay();
+            document.getElementById('play-btn').innerText = 'PAUSE';
+        }
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            const val = input.value.trim();
+            if (!val) return;
+
+            playSound(SFX_CLICK);
+            tasks.unshift({ id: Date.now(), text: val, completed: false });
+            input.value = '';
+            save();
+        }
+
+        function deleteTask(id, event) {
+            event.stopPropagation();
+            playSound(SFX_TV);
+            tasks = tasks.filter(t => t.id !== id);
+            save();
+        }
+
+        function toggleTask(id) {
+            playSound(SFX_CLICK);
+            tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+            save();
+        }
+
+        function save() {
+            localStorage.setItem('stas_tasks_final_v2', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = '';
+
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.setAttribute('draggable', 'true');
+                li.dataset.index = index;
+
+                li.innerHTML = `
+                    <div class="check-box" onclick="toggleTask(${task.id})"></div>
+                    <span class="task-text" onclick="toggleTask(${task.id})">${task.text}</span>
+                    <button class="delete-btn" onclick="deleteTask(${task.id}, event)">×</button>
+                `;
+
+                // Drag & Drop
+                li.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                });
+
+                li.addEventListener('dragover', (e) => e.preventDefault());
+
+                li.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIndex = e.dataTransfer.getData('text/plain');
+                    const toIndex = index;
+                    const item = tasks.splice(fromIndex, 1)[0];
+                    tasks.splice(toIndex, 0, item);
+                    save();
+                });
+
+                list.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
+
