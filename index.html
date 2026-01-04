@@ -128,7 +128,7 @@
         /* --- КОМПАКТНЫЙ ТАЙМЕР --- */
         .timer-row-main {
             display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            margin-bottom: 10px; border-bottom: 1px dashed #333; padding-bottom: 10px;
+            margin-bottom: 8px; border-bottom: 1px dashed #333; padding-bottom: 8px;
         }
         .timer-digits {
             font-size: 2.2rem; font-weight: 900; color: #fff;
@@ -144,19 +144,28 @@
         .t-btn-compact:hover { border-color: var(--red); color: var(--red); }
         .t-btn-compact.active { background: var(--red); color: #000; border-color: var(--red); }
         
-        /* Кнопки иконок (Векна и Экран) */
+        /* Кнопки иконок */
         .t-btn-icon {
             flex: 0.5; background: transparent; border: 1px solid #444;
-            color: #444; font-size: 1.2rem; cursor: pointer; transition: 0.2s;
-            display: flex; align-items: center; justify-content: center;
-            padding: 0;
+            color: #888; font-size: 1.2rem; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center; padding: 0;
         }
         .t-btn-icon.active { 
             border-color: var(--red); color: var(--red); 
             background: rgba(255,0,0,0.1); box-shadow: 0 0 5px var(--dark-red); 
         }
 
-        /* Настройки таймера (Сетка 2x2) */
+        /* Второй ряд кнопок таймера (Undo / Break) */
+        .timer-row-secondary {
+            display: flex; gap: 5px; margin-bottom: 8px;
+        }
+        .t-btn-sec {
+            flex: 1; background: #111; border: 1px solid #333;
+            color: #666; font-size: 0.7rem; font-weight: bold; padding: 6px 0;
+            cursor: pointer; text-transform: uppercase;
+        }
+        .t-btn-sec:active { background: var(--red); color: #000; }
+
         .timer-row-settings {
             display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
         }
@@ -218,7 +227,9 @@
         }
         .completed .checkbox { background: var(--red); border-color: var(--red); }
 
-        .btn-del { background: none; border: none; font-size: 1.5rem; color: #555; padding: 0 10px; cursor: pointer; }
+        .btn-action { background: none; border: none; font-size: 1.2rem; color: #555; padding: 0 8px; cursor: pointer; }
+        .btn-edit:hover { color: #fff; }
+        .btn-del:hover { color: var(--red); }
         
         .sortable-ghost { opacity: 0; }
         .sortable-drag { background: #000; border: 2px solid var(--red); opacity: 1 !important; transform: scale(1.05); z-index: 100; }
@@ -250,9 +261,9 @@
                 <button class="play-btn" id="play-btn" onclick="toggleAudio()">НАЧАТЬ ЭФИР</button>
             </div>
 
-            <!-- БЛОК ПОМОДОРО (КОМПАКТНЫЙ) -->
+            <!-- БЛОК ПОМОДОРО -->
             <div class="control-box">
-                <!-- Строка 1: Время и Кнопки -->
+                <!-- Строка 1: Главные кнопки -->
                 <div class="timer-row-main">
                     <div class="timer-digits" id="timer">25:00</div>
                     <div class="timer-actions">
@@ -262,7 +273,12 @@
                         <button class="t-btn-icon" id="wakelock-toggle" onclick="toggleWakeLock()">📵</button>
                     </div>
                 </div>
-                <!-- Строка 2: Настройки (Сетка 2x2) -->
+                <!-- Строка 2: Доп функции -->
+                <div class="timer-row-secondary">
+                    <button class="t-btn-sec" onclick="restoreTimerState()">↺ ОТКАТ</button>
+                    <button class="t-btn-sec" onclick="forceBreak()">☕ ОТДЫХ (5 МИН)</button>
+                </div>
+                <!-- Строка 3: Настройки -->
                 <div class="timer-row-settings">
                     <div class="setting-cell">
                         <label>РАБОТА:</label>
@@ -349,6 +365,7 @@
             s.play().catch(()=>{});
         }
 
+        // --- WAKE LOCK ---
         let wakeLock = null;
         async function toggleWakeLock() {
             const btn = document.getElementById('wakelock-toggle');
@@ -364,26 +381,62 @@
                     });
                 } catch (err) {
                     console.error(err);
-                    alert("Браузер не дал доступ к экрану (нужен HTTPS)");
+                    alert("Браузер не дал доступ (нужен HTTPS)");
                 }
             } else {
                 wakeLock.release();
                 wakeLock = null;
             }
         }
-        
         document.addEventListener('visibilitychange', async () => {
             if (wakeLock !== null && document.visibilityState === 'visible') {
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
             }
         });
 
-        // --- ТАЙМЕР ПОМОДОРО v2.0 ---
+        // --- ТАЙМЕР ПОМОДОРО ---
         let timerInterval = null;
         let timeLeft = 25 * 60; 
         let isWorkSession = true;
         let vecnaEnabled = true;
-        let currentCycle = 1; // Счетчик циклов
+        let currentCycle = 1;
+        // История для отката
+        let timerHistory = null;
+
+        function saveTimerState() {
+            timerHistory = {
+                timeLeft: timeLeft,
+                isWorkSession: isWorkSession,
+                currentCycle: currentCycle
+            };
+        }
+
+        function restoreTimerState() {
+            if (!timerHistory) {
+                alert("Нет данных для восстановления!");
+                return;
+            }
+            if (confirm("ТОЧНО ХОТИТЕ ВЕРНУТЬСЯ К ПРЕДЫДУЩЕМУ ШАГУ?")) {
+                stopTimer(); // Останавливаем текущий
+                timeLeft = timerHistory.timeLeft;
+                isWorkSession = timerHistory.isWorkSession;
+                currentCycle = timerHistory.currentCycle;
+                updateDisplay();
+                updateCycleStatus();
+            }
+        }
+
+        function forceBreak() {
+            saveTimerState(); // Сохраняем текущее состояние перед форсированием
+            stopTimer();
+            isWorkSession = false; // Режим отдыха
+            const brk = parseInt(document.getElementById('break-time').value) || 5;
+            timeLeft = brk * 60;
+            updateDisplay();
+            updateCycleStatus();
+            // Автостарт
+            toggleTimer();
+        }
 
         function toggleVecna() {
             vecnaEnabled = !vecnaEnabled;
@@ -423,36 +476,40 @@
         }
 
         function handleTimerComplete() {
+            // Перед завершением и сменой режима сохраняем состояние "как было в конце"
+            // Но лучше сохранять в начале следующего. 
+            // Логичнее сохранять ПЕРЕД сбросом.
+            saveTimerState();
+
+            // Остановка звука Векны, если играл
+            const vecna = document.getElementById('vecna-sfx');
+            vecna.pause();
+            vecna.currentTime = 0;
+
             stopTimer();
             triggerLightning();
             
             // Финальный звук
             if (vecnaEnabled) {
-                const vecna = document.getElementById('vecna-sfx');
+                // Перезапуск для удара
                 vecna.currentTime = 0;
                 vecna.play().catch(()=>{});
             } else {
                 playSfx('del');
             }
 
-            // Логика смены циклов
             const targetCycles = parseInt(document.getElementById('cycles-target').value) || 4;
 
             if (isWorkSession) {
-                // Закончили работу, переходим к отдыху
                 if (currentCycle >= targetCycles) {
-                    // Время БИГ ОТДЫХА
                     alert("ОТЛИЧНАЯ РАБОТА! ВРЕМЯ БОЛЬШОГО ОТДЫХА.");
                     isWorkSession = false; 
-                    // Время выставляется в resetTime на основе флага isWorkSession и currentCycle
                 } else {
                     alert("ВРЕМЯ ОТДЫХА.");
                     isWorkSession = false;
                 }
             } else {
-                // Закончили отдых, переходим к работе
                 if (currentCycle >= targetCycles) {
-                    // Закончили большой отдых, сброс циклов
                     currentCycle = 1;
                 } else {
                     currentCycle++;
@@ -474,17 +531,17 @@
                 btn.classList.remove('active');
                 document.getElementById('vecna-sfx').pause();
             } else {
-                // Старт (БЕСШУМНЫЙ ПРОГРЕВ)
+                // Старт
                 btn.innerText = "ПАУЗА";
                 btn.classList.add('active');
                 
-                // Используем muted для прогрева - это быстрее и не слышно
+                // Тихий прогрев аудио
                 const vecna = document.getElementById('vecna-sfx');
                 vecna.muted = true; 
                 vecna.play().then(() => {
                     vecna.pause();
                     vecna.currentTime = 0;
-                    vecna.muted = false; // Возвращаем звук
+                    vecna.muted = false; 
                 }).catch(()=>{});
 
                 startTimer();
@@ -492,13 +549,13 @@
         }
 
         function stopTimer() {
+            saveTimerState(); // Сохраняем перед сбросом
             clearInterval(timerInterval);
             timerInterval = null;
             const btn = document.getElementById('t-start-btn');
             btn.innerText = "СТАРТ";
             btn.classList.remove('active');
             isWorkSession = true; 
-            currentCycle = 1; // Сброс циклов при стопе
             document.getElementById('vecna-sfx').pause();
             document.getElementById('vecna-sfx').currentTime = 0;
             resetTime();
@@ -513,15 +570,13 @@
             if (isWorkSession) {
                 timeLeft = work * 60;
             } else {
-                // Если мы только что закончили последний цикл работы, значит сейчас большой отдых
-                // Но мы уже инкрементировали или проверили это в handleTimerComplete?
-                // Упрощение: если currentCycle >= target, то отдых большой.
-                // НО: currentCycle сбрасывается ПОСЛЕ большого отдыха.
-                // Логика: 
-                // Work 1 -> Break 1 -> Work 2 -> Break 2 ... Work 4 -> Big Break -> Work 1
+                // Логика определения типа отдыха (обычный или большой)
+                // Если мы только что закончили цикл == targetCycles, то должен быть большой отдых.
+                // Проблема: мы уже переключили флаги в handleTimerComplete.
+                // Там мы поставили isWorkSession = false.
+                // Нужно проверить, был ли это последний цикл.
                 
-                // Здесь мы просто ставим время. Логика переключения была в handleTimerComplete.
-                // Если мы пришли сюда из handleTimerComplete и isWorkSession == false:
+                // Упростим: если сейчас отдых, проверим текущий цикл
                 if (currentCycle >= targetCycles) {
                     timeLeft = longBrk * 60;
                 } else {
@@ -537,7 +592,7 @@
             if (!timerInterval) {
                 resetTime();
             } else {
-                updateCycleStatus(); // Обновляем только лейбл
+                updateCycleStatus();
             }
         }
 
@@ -590,6 +645,17 @@
             save(); render();
         }
 
+        // РЕДАКТИРОВАНИЕ
+        function editTask(id) {
+            const t = tasks.find(x => x.id === id);
+            if (!t) return;
+            const newTxt = prompt("ИЗМЕНИТЬ ЗАДАЧУ:", t.txt);
+            if (newTxt !== null && newTxt.trim() !== "") {
+                t.txt = newTxt.trim();
+                save(); render();
+            }
+        }
+
         function toggle(id) {
             const t = tasks.find(x => x.id === id);
             if(t) t.done = !t.done;
@@ -619,7 +685,8 @@
                 li.innerHTML = `
                     <div class="checkbox" onclick="toggle(${t.id})"></div>
                     <span class="task-text" onclick="toggle(${t.id})">${t.txt}</span>
-                    <button class="btn-del" onclick="del(${t.id})">×</button>
+                    <button class="btn-action btn-edit" onclick="editTask(${t.id})">✎</button>
+                    <button class="btn-action btn-del" onclick="del(${t.id})">×</button>
                 `;
                 if(t.done) com.appendChild(li); else act.appendChild(li);
             });
