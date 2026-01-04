@@ -128,7 +128,7 @@
         /* --- КОМПАКТНЫЙ ТАЙМЕР --- */
         .timer-row-main {
             display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            margin-bottom: 8px; border-bottom: 1px dashed #333; padding-bottom: 8px;
+            margin-bottom: 10px; border-bottom: 1px dashed #333; padding-bottom: 10px;
         }
         .timer-digits {
             font-size: 2.2rem; font-weight: 900; color: #fff;
@@ -156,18 +156,25 @@
             background: rgba(255,0,0,0.1); box-shadow: 0 0 5px var(--dark-red); 
         }
 
+        /* Настройки таймера (Сетка 2x2) */
         .timer-row-settings {
-            display: flex; gap: 10px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
         }
         .setting-cell {
-            flex: 1; display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 5px 10px;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 5px 8px;
         }
-        .setting-cell label { font-size: 0.7rem; color: #666; text-transform: uppercase; }
+        .setting-cell label { font-size: 0.6rem; color: #666; text-transform: uppercase; white-space: nowrap; }
         .setting-cell input {
-            width: 40px; background: transparent; border: none; text-align: right;
+            width: 35px; background: transparent; border: none; text-align: right;
             color: var(--red); font-weight: bold; font-family: inherit; font-size: 0.9rem;
-            outline: none;
+            outline: none; -moz-appearance: textfield;
+        }
+        .setting-cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .status-badge {
+            font-size: 0.7rem; color: #444; text-align: center; margin-top: 5px; 
+            letter-spacing: 1px; text-transform: uppercase;
         }
 
         /* Ввод задач */
@@ -251,13 +258,11 @@
                     <div class="timer-actions">
                         <button class="t-btn-compact" id="t-start-btn" onclick="toggleTimer()">СТАРТ</button>
                         <button class="t-btn-compact" onclick="stopTimer()">СБРОС</button>
-                        <!-- Кнопка Векны -->
                         <button class="t-btn-icon active" id="vecna-toggle" onclick="toggleVecna()">🔔</button>
-                        <!-- Кнопка Экрана -->
                         <button class="t-btn-icon" id="wakelock-toggle" onclick="toggleWakeLock()">📵</button>
                     </div>
                 </div>
-                <!-- Строка 2: Настройки -->
+                <!-- Строка 2: Настройки (Сетка 2x2) -->
                 <div class="timer-row-settings">
                     <div class="setting-cell">
                         <label>РАБОТА:</label>
@@ -267,7 +272,16 @@
                         <label>ОТДЫХ:</label>
                         <input type="number" id="break-time" value="5" onchange="updateSettings()">
                     </div>
+                    <div class="setting-cell">
+                        <label>Б. ОТДЫХ:</label>
+                        <input type="number" id="long-break-time" value="15" onchange="updateSettings()">
+                    </div>
+                    <div class="setting-cell">
+                        <label>ЦИКЛЫ:</label>
+                        <input type="number" id="cycles-target" value="4" onchange="updateSettings()">
+                    </div>
                 </div>
+                <div class="status-badge" id="cycle-status">ЦИКЛ 1 / 4</div>
             </div>
 
             <div class="input-row">
@@ -293,7 +307,6 @@
         const DB_KEY = 'STRANGER_THINGS_GOLD_DB';
         const LEGACY_KEYS = ['stas_tasks_final', 'stas_tasks_final_elite', 'stas_tasks_elite'];
 
-        // --- ВОССТАНОВЛЕНИЕ ДАННЫХ ---
         function loadTasks() {
             let data = [];
             try {
@@ -320,7 +333,6 @@
 
         let tasks = loadTasks();
 
-        // --- ЗВУКИ ---
         const songs = [
             "https://www.myinstants.com/media/sounds/st-int.mp3",
             "https://www.myinstants.com/media/sounds/stranger-things-maxs-music.mp3",
@@ -337,7 +349,6 @@
             s.play().catch(()=>{});
         }
 
-        // --- WAKE LOCK (ЭКРАН) ---
         let wakeLock = null;
         async function toggleWakeLock() {
             const btn = document.getElementById('wakelock-toggle');
@@ -345,7 +356,7 @@
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
                     btn.classList.add('active');
-                    btn.innerText = "📱"; // Экран активен
+                    btn.innerText = "📱"; 
                     wakeLock.addEventListener('release', () => {
                         wakeLock = null;
                         btn.classList.remove('active');
@@ -361,18 +372,18 @@
             }
         }
         
-        // Восстановление лока при возврате на вкладку
         document.addEventListener('visibilitychange', async () => {
             if (wakeLock !== null && document.visibilityState === 'visible') {
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
             }
         });
 
-        // --- ТАЙМЕР ПОМОДОРО ---
+        // --- ТАЙМЕР ПОМОДОРО v2.0 ---
         let timerInterval = null;
-        let timeLeft = 25 * 60; // Секунды
+        let timeLeft = 25 * 60; 
         let isWorkSession = true;
         let vecnaEnabled = true;
+        let currentCycle = 1; // Счетчик циклов
 
         function toggleVecna() {
             vecnaEnabled = !vecnaEnabled;
@@ -387,12 +398,17 @@
             document.getElementById('timer').innerText = `${m}:${s}`;
         }
 
+        function updateCycleStatus() {
+            const target = parseInt(document.getElementById('cycles-target').value) || 4;
+            const mode = isWorkSession ? "РАБОТА" : "ОТДЫХ";
+            document.getElementById('cycle-status').innerText = `${mode} • ЦИКЛ ${currentCycle} / ${target}`;
+        }
+
         function startTimer() {
             if (timerInterval) return;
             timerInterval = setInterval(() => {
                 if (timeLeft > 0) {
                     timeLeft--;
-                    // ВЕКНА ЭФФЕКТ (на 25 секунде)
                     if (timeLeft === 25 && vecnaEnabled) {
                         const vecna = document.getElementById('vecna-sfx');
                         vecna.currentTime = 0;
@@ -401,21 +417,51 @@
                     }
                     updateDisplay();
                 } else {
-                    // КОНЕЦ ТАЙМЕРА (00:00)
-                    if (vecnaEnabled) {
-                        const vecna = document.getElementById('vecna-sfx');
-                        vecna.currentTime = 0;
-                        vecna.play().catch(()=>{});
-                    } else {
-                        playSfx('del');
-                    }
-                    
-                    stopTimer();
-                    triggerLightning(); // Вспышка
-                    isWorkSession = !isWorkSession;
-                    resetTime();
+                    handleTimerComplete();
                 }
             }, 1000);
+        }
+
+        function handleTimerComplete() {
+            stopTimer();
+            triggerLightning();
+            
+            // Финальный звук
+            if (vecnaEnabled) {
+                const vecna = document.getElementById('vecna-sfx');
+                vecna.currentTime = 0;
+                vecna.play().catch(()=>{});
+            } else {
+                playSfx('del');
+            }
+
+            // Логика смены циклов
+            const targetCycles = parseInt(document.getElementById('cycles-target').value) || 4;
+
+            if (isWorkSession) {
+                // Закончили работу, переходим к отдыху
+                if (currentCycle >= targetCycles) {
+                    // Время БИГ ОТДЫХА
+                    alert("ОТЛИЧНАЯ РАБОТА! ВРЕМЯ БОЛЬШОГО ОТДЫХА.");
+                    isWorkSession = false; 
+                    // Время выставляется в resetTime на основе флага isWorkSession и currentCycle
+                } else {
+                    alert("ВРЕМЯ ОТДЫХА.");
+                    isWorkSession = false;
+                }
+            } else {
+                // Закончили отдых, переходим к работе
+                if (currentCycle >= targetCycles) {
+                    // Закончили большой отдых, сброс циклов
+                    currentCycle = 1;
+                } else {
+                    currentCycle++;
+                }
+                alert("ВРЕМЯ РАБОТЫ.");
+                isWorkSession = true;
+            }
+            
+            resetTime();
         }
 
         function toggleTimer() {
@@ -428,17 +474,17 @@
                 btn.classList.remove('active');
                 document.getElementById('vecna-sfx').pause();
             } else {
-                // Старт - ВАЖНО: Разблокируем звук сразу при клике
+                // Старт (БЕСШУМНЫЙ ПРОГРЕВ)
                 btn.innerText = "ПАУЗА";
                 btn.classList.add('active');
                 
-                // ПРОГРЕВ ЗВУКА ВЕКНЫ (хак для мобильных)
+                // Используем muted для прогрева - это быстрее и не слышно
                 const vecna = document.getElementById('vecna-sfx');
-                vecna.volume = 0; // Делаем беззвучно
+                vecna.muted = true; 
                 vecna.play().then(() => {
-                    vecna.pause(); // Сразу пауза
-                    vecna.volume = 0.8; // Возвращаем громкость
-                    vecna.currentTime = 0; // Сбрасываем
+                    vecna.pause();
+                    vecna.currentTime = 0;
+                    vecna.muted = false; // Возвращаем звук
                 }).catch(()=>{});
 
                 startTimer();
@@ -452,6 +498,7 @@
             btn.innerText = "СТАРТ";
             btn.classList.remove('active');
             isWorkSession = true; 
+            currentCycle = 1; // Сброс циклов при стопе
             document.getElementById('vecna-sfx').pause();
             document.getElementById('vecna-sfx').currentTime = 0;
             resetTime();
@@ -460,17 +507,40 @@
         function resetTime() {
             const work = parseInt(document.getElementById('work-time').value) || 25;
             const brk = parseInt(document.getElementById('break-time').value) || 5;
-            timeLeft = (isWorkSession ? work : brk) * 60;
+            const longBrk = parseInt(document.getElementById('long-break-time').value) || 15;
+            const targetCycles = parseInt(document.getElementById('cycles-target').value) || 4;
+
+            if (isWorkSession) {
+                timeLeft = work * 60;
+            } else {
+                // Если мы только что закончили последний цикл работы, значит сейчас большой отдых
+                // Но мы уже инкрементировали или проверили это в handleTimerComplete?
+                // Упрощение: если currentCycle >= target, то отдых большой.
+                // НО: currentCycle сбрасывается ПОСЛЕ большого отдыха.
+                // Логика: 
+                // Work 1 -> Break 1 -> Work 2 -> Break 2 ... Work 4 -> Big Break -> Work 1
+                
+                // Здесь мы просто ставим время. Логика переключения была в handleTimerComplete.
+                // Если мы пришли сюда из handleTimerComplete и isWorkSession == false:
+                if (currentCycle >= targetCycles) {
+                    timeLeft = longBrk * 60;
+                } else {
+                    timeLeft = brk * 60;
+                }
+            }
+            
             updateDisplay();
+            updateCycleStatus();
         }
 
         function updateSettings() {
             if (!timerInterval) {
                 resetTime();
+            } else {
+                updateCycleStatus(); // Обновляем только лейбл
             }
         }
 
-        // --- СПОРЫ И ГРОЗА ---
         function initSpores() {
             const container = document.getElementById('spores-container');
             for (let i = 0; i < 50; i++) {
@@ -500,7 +570,6 @@
             light.classList.add('flash-now');
         }
 
-        // --- ОСНОВНАЯ ЛОГИКА ---
         function initApp() {
             initSpores();
             render();
