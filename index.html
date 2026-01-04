@@ -144,13 +144,17 @@
         .t-btn-compact:hover { border-color: var(--red); color: var(--red); }
         .t-btn-compact.active { background: var(--red); color: #000; border-color: var(--red); }
         
-        /* Кнопка Векны */
-        .t-btn-vecna {
+        /* Кнопки иконок (Векна и Экран) */
+        .t-btn-icon {
             flex: 0.5; background: transparent; border: 1px solid #444;
-            color: #444; font-size: 1rem; cursor: pointer; transition: 0.2s;
+            color: #444; font-size: 1.2rem; cursor: pointer; transition: 0.2s;
             display: flex; align-items: center; justify-content: center;
+            padding: 0;
         }
-        .t-btn-vecna.active { border-color: var(--red); color: var(--red); background: rgba(255,0,0,0.1); box-shadow: 0 0 5px var(--dark-red); }
+        .t-btn-icon.active { 
+            border-color: var(--red); color: var(--red); 
+            background: rgba(255,0,0,0.1); box-shadow: 0 0 5px var(--dark-red); 
+        }
 
         .timer-row-settings {
             display: flex; gap: 10px;
@@ -248,7 +252,9 @@
                         <button class="t-btn-compact" id="t-start-btn" onclick="toggleTimer()">СТАРТ</button>
                         <button class="t-btn-compact" onclick="stopTimer()">СБРОС</button>
                         <!-- Кнопка Векны -->
-                        <button class="t-btn-vecna active" id="vecna-toggle" onclick="toggleVecna()">🔔</button>
+                        <button class="t-btn-icon active" id="vecna-toggle" onclick="toggleVecna()">🔔</button>
+                        <!-- Кнопка Экрана -->
+                        <button class="t-btn-icon" id="wakelock-toggle" onclick="toggleWakeLock()">📵</button>
                     </div>
                 </div>
                 <!-- Строка 2: Настройки -->
@@ -331,6 +337,37 @@
             s.play().catch(()=>{});
         }
 
+        // --- WAKE LOCK (ЭКРАН) ---
+        let wakeLock = null;
+        async function toggleWakeLock() {
+            const btn = document.getElementById('wakelock-toggle');
+            if (!wakeLock) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    btn.classList.add('active');
+                    btn.innerText = "📱"; // Экран активен
+                    wakeLock.addEventListener('release', () => {
+                        wakeLock = null;
+                        btn.classList.remove('active');
+                        btn.innerText = "📵";
+                    });
+                } catch (err) {
+                    console.error(err);
+                    alert("Браузер не дал доступ к экрану (нужен HTTPS)");
+                }
+            } else {
+                wakeLock.release();
+                wakeLock = null;
+            }
+        }
+        
+        // Восстановление лока при возврате на вкладку
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+            }
+        });
+
         // --- ТАЙМЕР ПОМОДОРО ---
         let timerInterval = null;
         let timeLeft = 25 * 60; // Секунды
@@ -366,7 +403,6 @@
                 } else {
                     // КОНЕЦ ТАЙМЕРА (00:00)
                     if (vecnaEnabled) {
-                        // Финальный гонг (перезапуск звука для удара)
                         const vecna = document.getElementById('vecna-sfx');
                         vecna.currentTime = 0;
                         vecna.play().catch(()=>{});
@@ -390,7 +426,6 @@
                 timerInterval = null;
                 btn.innerText = "СТАРТ";
                 btn.classList.remove('active');
-                // Если часы били, ставим на паузу
                 document.getElementById('vecna-sfx').pause();
             } else {
                 // Старт
