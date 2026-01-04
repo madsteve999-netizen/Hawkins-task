@@ -3,317 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stranger Tasks - Stas Offline Edition</title>
+    <title>Stranger Tasks - Stas Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root {
-            --red: #ff1e1e;
-            --dark-red: #8a0a0a;
+            --red: #ff0000;
+            --dark-red: #590000;
         }
+
+        * { box-sizing: border-box; }
 
         body, html {
             margin: 0; padding: 0;
-            background-color: #050505;
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            height: 100%; width: 100%;
+            width: 100%; height: 100%;
             overflow-x: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- ГЕНЕРАТОР ФОНА (ЧИСТЫЙ КОД) --- */
-        .scene {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -5;
-            background: linear-gradient(to bottom, #000000 0%, #1a0505 40%, #5e0000 80%, #ff4444 100%);
-            overflow: hidden;
-        }
-
-        /* Туман внизу */
-        .scene::after {
-            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 40%;
-            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
-            z-index: 2;
-        }
-
-        /* Силуэт леса (Вектор SVG зашитый в CSS) */
-        .forest {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 250px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 300' preserveAspectRatio='none'%3E%3Cpath fill='%23000' d='M0,300 L0,200 L50,150 L100,220 L150,120 L200,230 L250,140 L300,210 L350,100 L400,220 L450,130 L500,240 L550,110 L600,200 L650,140 L700,230 L750,120 L800,210 L850,150 L900,240 L950,100 L1000,220 L1050,130 L1100,200 L1150,150 L1200,200 L1200,300 Z'/%3E%3C/svg%3E");
-            background-size: 100% 100%;
-            background-repeat: no-repeat;
-            z-index: 1;
-            opacity: 0.9;
-        }
-
-        /* Силуэт детей на велосипедах (Вектор SVG) */
-        .bikes {
-            position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%);
-            width: 300px; height: 100px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'%3E%3Cg fill='%23000'%3E%3Ccircle cx='30' cy='80' r='10'/%3E%3Ccircle cx='60' cy='80' r='10'/%3E%3Cpath d='M30,80 L45,50 L60,80' stroke='%23000' stroke-width='3'/%3E%3Ccircle cx='100' cy='75' r='10'/%3E%3Ccircle cx='130' cy='75' r='10'/%3E%3Cpath d='M100,75 L115,45 L130,75' stroke='%23000' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E");
-            background-repeat: no-repeat;
+        /* --- ФОН (ТВОЯ ССЫЛКА) --- */
+        .bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 0;
+            
+            /* Ссылка на картинку (пропущена через прокси wsrv.nl для обхода защиты от хотлинкинга) */
+            background-image: url('https://wsrv.nl/?url=https://images.cgames.de/images/gamestar/290/stranger-things_6000665.jpg&w=1200&output=jpg&q=80');
+            background-size: cover;
             background-position: center;
-            background-size: contain;
-            z-index: 1;
-            opacity: 0.8;
-            filter: blur(0.5px);
+            
+            /* Легкие фильтры, чтобы белый текст читался идеально */
+            filter: contrast(1.1) brightness(0.7);
         }
 
-        /* Споры Изнанки */
-        .spores {
-            position: fixed; inset: 0; pointer-events: none; z-index: 50;
-            background-image: radial-gradient(#fff 1px, transparent 1px);
-            background-size: 60px 60px;
-            opacity: 0.3;
-            animation: float 20s linear infinite;
+        /* Затемнение снизу вверх, чтобы интерфейс не сливался */
+        .overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 1;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.9) 100%);
         }
-        @keyframes float { from { background-position: 0 0; } to { background-position: 0 100px; } }
 
-        /* Помехи */
+        /* Помехи (Scanlines) */
         .scanlines {
-            position: fixed; inset: 0; pointer-events: none; z-index: 55;
+            position: fixed; inset: 0; pointer-events: none; z-index: 2;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 4px;
-            opacity: 0.3;
+            background-size: 100% 4px; opacity: 0.2;
         }
 
         /* --- ИНТЕРФЕЙС --- */
-        @keyframes flicker {
-            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; text-shadow: 0 0 15px var(--red); }
-            20%, 22%, 24%, 55% { opacity: 0.5; text-shadow: none; }
+        #app-ui {
+            position: relative; z-index: 10; height: 100%;
+            display: flex; flex-direction: column;
         }
 
-        .neon-text {
-            color: var(--red);
-            text-shadow: 0 0 15px var(--red), 0 0 30px var(--dark-red);
-            text-transform: uppercase;
-            font-weight: 900;
-            animation: flicker 4s infinite step-end;
-            letter-spacing: -2px;
-        }
-
+        /* Вход */
         #entry-screen {
-            position: fixed; inset: 0; background: #000; z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center;
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; background: rgba(0,0,0,0.85); z-index: 20;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; text-shadow: 0 0 20px var(--red); }
+            50% { opacity: 0.8; text-shadow: 0 0 5px var(--dark-red); }
+        }
+
+        .neon-title {
+            font-size: 3.5rem; color: var(--red); font-weight: 900;
+            text-transform: uppercase; letter-spacing: -2px; margin-bottom: 40px;
+            text-shadow: 0 0 10px var(--red); animation: flicker 3s infinite; text-align: center;
         }
 
         .btn-enter {
-            background: transparent; border: 2px solid var(--red); color: var(--red);
-            padding: 20px 50px; font-size: 1.5rem; letter-spacing: 4px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); text-transform: uppercase;
-            margin-top: 30px; transition: 0.3s;
+            background: transparent; border: 3px solid var(--red); color: var(--red);
+            padding: 15px 40px; font-size: 1.5rem; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; box-shadow: 0 0 20px var(--dark-red);
         }
-        .btn-enter:active { background: var(--red); color: #000; }
 
-        #main-app { display: none; padding: 20px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; position: relative; z-index: 60; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--dark-red); padding-bottom: 20px; }
+        /* Основной блок */
+        #workspace {
+            display: none; padding: 20px; max-width: 600px; margin: 0 auto;
+            width: 100%; padding-bottom: 100px;
+        }
 
-        .radio-deck {
-            background: rgba(20, 10, 10, 0.9); border: 1px solid var(--dark-red);
-            padding: 15px; margin-bottom: 30px; box-shadow: 0 0 20px #000;
+        .header {
+            text-align: center; margin-bottom: 20px; padding-bottom: 10px;
+            border-bottom: 2px solid var(--dark-red);
         }
-        .radio-screen {
-            background: #000; border: 1px solid #333; color: var(--red);
-            padding: 8px; text-align: center; margin-bottom: 10px; font-size: 0.8rem; font-weight: bold;
+        .header h2 { color: var(--red); margin: 0; font-size: 2rem; text-transform: uppercase; text-shadow: 0 0 10px #000; }
+
+        /* Радио */
+        .radio-box {
+            background: rgba(20, 0, 0, 0.8); border: 1px solid var(--dark-red);
+            padding: 15px; margin-bottom: 20px; backdrop-filter: blur(5px);
         }
-        .channel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
-        .channel-btn {
-            background: #111; border: 1px solid #333; color: #555; padding: 12px 0;
-            cursor: pointer; font-weight: bold; transition: 0.2s;
+        .channel-row { display: flex; gap: 5px; margin-bottom: 10px; }
+        .ch-btn {
+            flex: 1; background: #111; border: 1px solid #444; color: #777;
+            padding: 10px; cursor: pointer; font-weight: bold; text-align: center;
         }
-        .channel-btn.active { border-color: var(--red); color: var(--red); background: rgba(255, 0, 0, 0.2); }
+        .ch-btn.active { border-color: var(--red); color: var(--red); background: rgba(255,0,0,0.2); }
+        
         .play-btn {
-            width: 100%; background: transparent; border: 1px solid var(--red); color: var(--red);
-            padding: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;
+            width: 100%; padding: 12px; background: transparent; border: 1px solid var(--red);
+            color: var(--red); font-weight: bold; text-transform: uppercase; cursor: pointer;
         }
         .play-btn.playing { background: var(--red); color: #000; }
 
-        .input-group { position: relative; margin-bottom: 40px; display: flex; }
+        /* Ввод */
+        .input-row { display: flex; margin-bottom: 30px; position: relative; }
         #task-input {
-            width: 100%; background: rgba(0,0,0,0.6); border: none; border-bottom: 2px solid var(--dark-red);
+            width: 100%; background: rgba(0,0,0,0.7); border: none; border-bottom: 2px solid var(--dark-red);
             color: #fff; font-size: 1.2rem; padding: 15px; padding-right: 60px; outline: none;
         }
-        #task-input:focus { border-color: var(--red); }
         .add-btn {
             position: absolute; right: 0; top: 0; height: 100%; width: 60px;
             background: transparent; border: none; color: var(--red); font-size: 2.5rem;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
 
-        .task-list { list-style: none; padding: 0; margin: 0; }
-        .task-item {
-            background: rgba(20, 20, 20, 0.95); border-left: 4px solid var(--dark-red);
-            margin-bottom: 10px; padding: 15px; display: flex; align-items: center; gap: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5); touch-action: none;
-        }
+        /* Список */
+        ul { list-style: none; padding: 0; margin: 0; }
         
-        .task-text {
-            flex-grow: 1; font-size: 1.1rem; color: #ffffff !important;
-            font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
-            text-shadow: 2px 2px 0 #000;
+        .task-item {
+            background: rgba(20, 20, 20, 0.85);
+            border-left: 4px solid var(--red);
+            margin-bottom: 10px; padding: 15px;
+            display: flex; align-items: center; gap: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            touch-action: none;
         }
 
-        .task-item.completed { opacity: 0.5; background: rgba(10, 10, 10, 0.8); border-left-color: #333; }
+        .task-text {
+            flex: 1; font-size: 1.1rem; color: #ffffff !important;
+            font-weight: 800; text-transform: uppercase;
+            text-shadow: 2px 2px 0 #000; letter-spacing: 0.5px;
+        }
+
+        .task-item.completed { opacity: 0.6; border-left-color: #444; background: rgba(10,10,10,0.8); }
         .task-item.completed .task-text {
-            text-decoration: line-through; color: #888 !important; font-weight: normal; text-shadow: none;
+            text-decoration: line-through; color: #999 !important; text-shadow: none; font-weight: normal;
         }
 
         .checkbox {
-            width: 24px; height: 24px; border: 2px solid var(--dark-red);
-            display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-            background: #000;
+            width: 26px; height: 26px; border: 2px solid var(--dark-red); background: #000;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .completed .checkbox { background: var(--red); border-color: var(--red); }
-        .delete-btn { background: none; border: none; color: #444; font-size: 1.5rem; padding: 0 10px; }
 
+        .btn-del { background: none; border: none; font-size: 1.5rem; color: #555; padding: 0 10px; cursor: pointer; }
+        
         .sortable-ghost { opacity: 0; }
-        .sortable-drag { background: #000; border: 1px solid var(--red); opacity: 1 !important; transform: scale(1.02); z-index: 1000; }
+        .sortable-drag { background: #000; border: 2px solid var(--red); opacity: 1 !important; transform: scale(1.05); z-index: 100; }
+
+        .list-title { color: #888; font-size: 0.8rem; text-align: center; margin-bottom: 10px; letter-spacing: 2px; text-shadow: 1px 1px 2px #000; }
+        #completed-list { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #333; }
+
     </style>
 </head>
 <body>
 
-    <!-- АВТОНОМНЫЙ ГЕНЕРАТОР ФОНА -->
-    <div class="scene">
-        <div class="forest"></div>
-        <div class="bikes"></div>
-        <div class="spores"></div>
-        <div class="scanlines"></div>
-    </div>
+    <div class="bg-layer"></div>
+    <div class="overlay"></div>
+    <div class="scanlines"></div>
 
-    <!-- ВХОД -->
-    <div id="entry-screen">
-        <h1 class="neon-text" style="font-size: 4rem; line-height: 0.9; margin-bottom: 30px;">HAWKINS<br>LAB</h1>
-        <button class="btn-enter" onclick="initApp()">ENTER</button>
-        <p style="margin-top: 40px; color: #555; font-size: 0.7rem; letter-spacing: 2px;">RESTRICTED AREA 51</p>
-    </div>
-
-    <!-- ПРИЛОЖЕНИЕ -->
-    <div id="main-app">
-        <div class="header">
-            <h2 class="neon-text">MISSION LOG</h2>
+    <div id="app-ui">
+        <!-- ENTRY -->
+        <div id="entry-screen">
+            <div class="neon-title">HAWKINS<br>LAB</div>
+            <button class="btn-enter" onclick="startApp()">ENTER</button>
         </div>
 
-        <div class="radio-deck">
-            <div class="radio-screen">FREQ: <span id="track-name">SILENCE</span></div>
-            <div class="channel-grid">
-                <button class="channel-btn active" onclick="setChannel(0)">1</button>
-                <button class="channel-btn" onclick="setChannel(1)">2</button>
-                <button class="channel-btn" onclick="setChannel(2)">3</button>
-                <button class="channel-btn" onclick="setChannel(3)">4</button>
-                <button class="channel-btn" onclick="setChannel(4)">5</button>
+        <!-- WORKSPACE -->
+        <div id="workspace">
+            <div class="header"><h2>MISSION LOG</h2></div>
+
+            <!-- Radio -->
+            <div class="radio-box">
+                <div class="channel-row">
+                    <div class="ch-btn active" onclick="setCh(0)">1</div>
+                    <div class="ch-btn" onclick="setCh(1)">2</div>
+                    <div class="ch-btn" onclick="setCh(2)">3</div>
+                    <div class="ch-btn" onclick="setCh(3)">4</div>
+                    <div class="ch-btn" onclick="setCh(4)">5</div>
+                </div>
+                <button class="play-btn" id="play-btn" onclick="toggleAudio()">START TRANSMISSION</button>
             </div>
-            <button class="play-btn" id="play-btn" onclick="toggleAudio()">START TRANSMISSION</button>
-        </div>
 
-        <div class="input-group">
-            <input type="text" id="task-input" placeholder="NEW OBJECTIVE..." onkeydown="if(event.key==='Enter') addTask()">
-            <button class="add-btn" onclick="addTask()">+</button>
-        </div>
+            <!-- Input -->
+            <div class="input-row">
+                <input type="text" id="task-input" placeholder="NEW OBJECTIVE..." onkeydown="if(event.key==='Enter') addTask()">
+                <button class="add-btn" onclick="addTask()">+</button>
+            </div>
 
-        <ul id="active-tasks" class="task-list"></ul>
-        <ul id="completed-tasks" class="task-list" style="margin-top: 40px; border-top: 1px dashed #333; padding-top: 20px;"></ul>
+            <!-- Lists -->
+            <div class="list-title">ACTIVE</div>
+            <ul id="active-list"></ul>
+
+            <div id="completed-section">
+                <div class="list-title" style="margin-top: 30px;">ARCHIVED</div>
+                <ul id="completed-list"></ul>
+            </div>
+        </div>
     </div>
 
-    <audio id="audio-player" loop></audio>
+    <audio id="audio" loop></audio>
 
     <script>
-        let tasks = JSON.parse(localStorage.getItem('stas_tasks_offline')) || [];
-        const playlist = [
-            { name: "THEME", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-            { name: "UPSIDE DOWN", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-            { name: "1984", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-            { name: "LABORATORY", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
-            { name: "ELEVEN", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" }
+        // DATA
+        let tasks = [];
+        try { tasks = JSON.parse(localStorage.getItem('stas_tasks_final')) || []; } catch(e){}
+
+        const songs = [
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
         ];
-        let currentChannel = 0;
-        const SFX_CLICK = "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3";
-        const SFX_TV = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
+        let curCh = 0;
+        
+        // SOUNDS
+        const sfxClick = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
+        const sfxDel = new Audio("https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3");
 
-        function playSFX(src) { try { new Audio(src).play().catch(()=>{}); } catch(e){} }
+        function playSfx(type) {
+            const s = type === 'click' ? sfxClick : sfxDel;
+            s.currentTime = 0; s.volume = 0.4;
+            s.play().catch(()=>{});
+        }
 
-        function initApp() {
+        // APP LOGIC
+        function startApp() {
             document.getElementById('entry-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            document.getElementById('audio-player').src = playlist[currentChannel].url;
-            renderAll();
+            document.getElementById('workspace').style.display = 'block';
             
-            const opts = {
-                animation: 150, ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', delay: 100,
-                onEnd: () => {
-                    const newTasks = [];
-                    document.querySelectorAll('#active-tasks .task-item').forEach(el => {
-                        const t = tasks.find(x => x.id == el.dataset.id);
-                        if(t) newTasks.push(t);
-                    });
-                    document.querySelectorAll('#completed-tasks .task-item').forEach(el => {
-                        const t = tasks.find(x => x.id == el.dataset.id);
-                        if(t) newTasks.push(t);
-                    });
-                    tasks = newTasks; save();
-                }
-            };
-            Sortable.create(document.getElementById('active-tasks'), opts);
-            Sortable.create(document.getElementById('completed-tasks'), opts);
-        }
-
-        function setChannel(idx) {
-            currentChannel = idx;
-            const p = document.getElementById('audio-player');
-            const wasPlaying = !p.paused;
-            p.src = playlist[idx].url;
-            if(wasPlaying) p.play();
-            updateUI(); playSFX(SFX_CLICK);
-        }
-
-        function toggleAudio() {
-            const p = document.getElementById('audio-player');
-            const btn = document.getElementById('play-btn');
-            if(p.paused) { p.play(); btn.innerText = "STOP TRANSMISSION"; btn.classList.add('playing'); }
-            else { p.pause(); btn.innerText = "START TRANSMISSION"; btn.classList.remove('playing'); }
-        }
-
-        function updateUI() {
-            document.getElementById('track-name').innerText = playlist[currentChannel].name;
-            document.querySelectorAll('.channel-btn').forEach((b,i) => {
-                b.classList.toggle('active', i === currentChannel);
-            });
+            const au = document.getElementById('audio');
+            au.src = songs[curCh];
+            au.volume = 0.5;
+            
+            render();
+            initDrag();
         }
 
         function addTask() {
             const inp = document.getElementById('task-input');
-            if(!inp.value.trim()) return;
-            tasks.push({ id: Date.now(), text: inp.value.trim(), completed: false });
-            inp.value = ''; playSFX(SFX_CLICK); save(); renderAll();
-        }
-
-        function toggleTask(id) {
-            tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
-            playSFX(SFX_CLICK); save(); renderAll();
-        }
-
-        function deleteTask(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            playSFX(SFX_TV); save(); renderAll();
-        }
-
-        function save() { localStorage.setItem('stas_tasks_offline', JSON.stringify(tasks)); }
-
-        function renderAll() {
-            const act = document.getElementById('active-tasks');
-            const com = document.getElementById('completed-tasks');
-            act.innerHTML = ''; com.innerHTML = '';
+            const val = inp.value.trim();
+            if(!val) return;
             
+            tasks.push({ id: Date.now(), txt: val, done: false });
+            inp.value = '';
+            playSfx('click');
+            save(); render();
+        }
+
+        function toggle(id) {
+            const t = tasks.find(x => x.id === id);
+            if(t) t.done = !t.done;
+            playSfx('click');
+            save(); render();
+        }
+
+        function del(id) {
+            tasks = tasks.filter(x => x.id !== id);
+            playSfx('del');
+            save(); render();
+        }
+
+        function save() {
+            try { localStorage.setItem('stas_tasks_final', JSON.stringify(tasks)); } catch(e){}
+        }
+
+        function render() {
+            const act = document.getElementById('active-list');
+            const com = document.getElementById('completed-list');
+            act.innerHTML = ''; com.innerHTML = '';
+
             tasks.forEach(t => {
                 const li = document.createElement('li');
-                li.className = `task-item ${t.completed ? 'completed' : ''}`;
+                li.className = `task-item ${t.done ? 'done' : ''}`;
                 li.dataset.id = t.id;
                 li.innerHTML = `
-                    <div class="checkbox" onclick="toggleTask(${t.id})"></div>
-                    <span class="task-text" onclick="toggleTask(${t.id})">${t.text}</span>
-                    <button class="delete-btn" onclick="deleteTask(${t.id})">×</button>
+                    <div class="checkbox" onclick="toggle(${t.id})"></div>
+                    <span class="task-text" onclick="toggle(${t.id})">${t.txt}</span>
+                    <button class="btn-del" onclick="del(${t.id})">×</button>
                 `;
-                if(t.completed) com.appendChild(li); else act.appendChild(li);
+                if(t.done) com.appendChild(li); else act.appendChild(li);
             });
+        }
+
+        // RADIO
+        function setCh(idx) {
+            curCh = idx;
+            const au = document.getElementById('audio');
+            const isPlaying = !au.paused;
+            au.src = songs[idx];
+            if(isPlaying) au.play();
+            
+            document.querySelectorAll('.ch-btn').forEach((b,i) => 
+                b.classList.toggle('active', i === idx));
+            playSfx('click');
+        }
+
+        function toggleAudio() {
+            const au = document.getElementById('audio');
+            const btn = document.getElementById('play-btn');
+            
+            if(au.paused) {
+                au.play();
+                btn.innerText = "STOP TRANSMISSION";
+                btn.classList.add('playing');
+            } else {
+                au.pause();
+                btn.innerText = "START TRANSMISSION";
+                btn.classList.remove('playing');
+            }
+        }
+
+        // DRAG
+        function initDrag() {
+            if(typeof Sortable !== 'undefined') {
+                const opts = {
+                    animation: 150, delay: 100, delayOnTouchOnly: true,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: () => {
+                        const newOrder = [];
+                        document.querySelectorAll('.task-item').forEach(el => {
+                            const found = tasks.find(t => t.id == el.dataset.id);
+                            if(found) newOrder.push(found);
+                        });
+                        tasks = newOrder;
+                        save();
+                    }
+                };
+                Sortable.create(document.getElementById('active-list'), opts);
+                Sortable.create(document.getElementById('completed-list'), opts);
+            }
         }
     </script>
 </body>
