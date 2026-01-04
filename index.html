@@ -26,11 +26,9 @@
         .bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             z-index: 0;
-            /* ОПТИМИЗАЦИЯ: output=webp, w=800, q=65. Грузится моментально. */
-            background-image: url('https://images.cgames.de/images/gamestar/290/stranger-things_6000665.jpg&w=800&output=webp&q=65');
+            background-image: url('https://images.cgames.de/images/gamestar/290/stranger-things_6000665.jpg');
             background-size: cover;
             background-position: center;
-            background-color: #1a0505; /* Цвет-заглушка, пока картинка летит (красноватая тьма) */
             filter: contrast(1.1) brightness(0.7);
             transition: filter 0.2s;
         }
@@ -46,57 +44,36 @@
             background-size: 100% 4px; opacity: 0.2;
         }
 
-        /* --- СИСТЕМА СПОР --- */
+        /* --- ЭФФЕКТЫ --- */
         #spores-container {
             position: fixed; inset: 0; pointer-events: none; z-index: 3;
-            opacity: 0;
-            transition: opacity 2s ease;
-            overflow: hidden;
+            opacity: 0; transition: opacity 2s ease; overflow: hidden;
         }
-
-        body.music-active #spores-container {
-            opacity: 1;
-        }
+        body.music-active #spores-container { opacity: 1; }
 
         .spore {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            opacity: 0;
+            position: absolute; background: white; border-radius: 50%; opacity: 0;
             box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
         }
 
         @keyframes fall {
             0% { top: -10%; opacity: 0; }
-            10% { opacity: 0.8; }
-            90% { opacity: 0.8; }
+            10%, 90% { opacity: 0.8; }
             100% { top: 110%; opacity: 0; }
         }
-
         @keyframes sway {
             0% { transform: translateX(0px); }
             100% { transform: translateX(25px); }
         }
 
-        /* --- МОЛНИЯ --- */
         #lightning {
             position: fixed; inset: 0; z-index: 4; pointer-events: none;
-            background: rgba(255, 255, 255, 0.15);
-            mix-blend-mode: hard-light;
-            opacity: 0;
+            background: rgba(255, 255, 255, 0.15); mix-blend-mode: hard-light; opacity: 0;
         }
-
-        .flash-now {
-            animation: thunder-strike 0.6s ease-out;
-        }
-
+        .flash-now { animation: thunder-strike 0.6s ease-out; }
         @keyframes thunder-strike {
-            0% { opacity: 0; }
-            5% { opacity: 0.8; }
-            10% { opacity: 0.3; }
-            15% { opacity: 0.6; }
-            30% { opacity: 0.1; }  
-            100% { opacity: 0; }
+            0%, 100% { opacity: 0; }
+            5% { opacity: 0.8; } 15% { opacity: 0.6; }
         }
 
         /* --- ИНТЕРФЕЙС --- */
@@ -105,32 +82,14 @@
             display: flex; flex-direction: column;
         }
 
-        #entry-screen {
-            position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; background: rgba(0,0,0,0.85); z-index: 20;
-        }
-
+        /* Анимация мерцания текста */
         @keyframes flicker {
             0%, 100% { opacity: 1; text-shadow: 0 0 20px var(--red); }
             50% { opacity: 0.8; text-shadow: 0 0 5px var(--dark-red); }
-            70% { opacity: 0.9; text-shadow: 0 0 15px var(--red); }
-        }
-
-        .neon-title {
-            font-size: 3.5rem; color: var(--red); font-weight: 900;
-            text-transform: uppercase; letter-spacing: -2px; margin-bottom: 40px;
-            text-shadow: 0 0 10px var(--red); animation: flicker 3s infinite; text-align: center;
-            line-height: 1.1;
-        }
-
-        .btn-enter {
-            background: transparent; border: 3px solid var(--red); color: var(--red);
-            padding: 15px 40px; font-size: 1.5rem; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; box-shadow: 0 0 20px var(--dark-red);
         }
 
         #workspace {
-            display: none; padding: 20px; max-width: 600px; margin: 0 auto;
+            display: block; padding: 20px; max-width: 600px; margin: 0 auto;
             width: 100%; padding-bottom: 100px;
         }
 
@@ -144,23 +103,70 @@
             animation: flicker 4s infinite alternate; 
         }
 
-        .radio-box {
-            background: rgba(20, 0, 0, 0.8); border: 1px solid var(--dark-red);
-            padding: 15px; margin-bottom: 20px; backdrop-filter: blur(5px);
+        /* БЛОКИ (Радио и Таймер) */
+        .control-box {
+            background: rgba(20, 0, 0, 0.85); border: 1px solid var(--dark-red);
+            padding: 10px; margin-bottom: 15px; backdrop-filter: blur(5px);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
+
+        /* Радио */
         .channel-row { display: flex; gap: 5px; margin-bottom: 10px; }
         .ch-btn {
             flex: 1; background: #111; border: 1px solid #444; color: #777;
-            padding: 10px; cursor: pointer; font-weight: bold; text-align: center;
+            padding: 10px; cursor: pointer; font-weight: bold; text-align: center; transition: 0.2s;
         }
         .ch-btn.active { border-color: var(--red); color: var(--red); background: rgba(255,0,0,0.2); }
         
         .play-btn {
             width: 100%; padding: 12px; background: transparent; border: 1px solid var(--red);
             color: var(--red); font-weight: bold; text-transform: uppercase; cursor: pointer;
+            transition: 0.2s;
         }
         .play-btn.playing { background: var(--red); color: #000; }
 
+        /* --- КОМПАКТНЫЙ ТАЙМЕР --- */
+        .timer-row-main {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            margin-bottom: 8px; border-bottom: 1px dashed #333; padding-bottom: 8px;
+        }
+        .timer-digits {
+            font-size: 2.2rem; font-weight: 900; color: #fff;
+            text-shadow: 0 0 10px var(--red); letter-spacing: 1px;
+            font-variant-numeric: tabular-nums;
+        }
+        .timer-actions { display: flex; gap: 5px; flex: 1; }
+        .t-btn-compact {
+            flex: 2; background: transparent; border: 1px solid var(--dark-red);
+            color: #888; font-weight: bold; font-size: 0.8rem; padding: 10px 0;
+            cursor: pointer; text-transform: uppercase; transition: 0.2s;
+        }
+        .t-btn-compact:hover { border-color: var(--red); color: var(--red); }
+        .t-btn-compact.active { background: var(--red); color: #000; border-color: var(--red); }
+        
+        /* Кнопка Векны */
+        .t-btn-vecna {
+            flex: 0.5; background: transparent; border: 1px solid #444;
+            color: #444; font-size: 1rem; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .t-btn-vecna.active { border-color: var(--red); color: var(--red); background: rgba(255,0,0,0.1); box-shadow: 0 0 5px var(--dark-red); }
+
+        .timer-row-settings {
+            display: flex; gap: 10px;
+        }
+        .setting-cell {
+            flex: 1; display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 5px 10px;
+        }
+        .setting-cell label { font-size: 0.7rem; color: #666; text-transform: uppercase; }
+        .setting-cell input {
+            width: 40px; background: transparent; border: none; text-align: right;
+            color: var(--red); font-weight: bold; font-family: inherit; font-size: 0.9rem;
+            outline: none;
+        }
+
+        /* Ввод задач */
         .input-row { display: flex; margin-bottom: 30px; position: relative; }
         #task-input {
             width: 100%; background: rgba(0,0,0,0.7); border: none; border-bottom: 2px solid var(--dark-red);
@@ -172,6 +178,7 @@
             cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
 
+        /* Списки */
         ul { list-style: none; padding: 0; margin: 0; }
         
         .task-item {
@@ -219,15 +226,11 @@
     <div id="spores-container"></div>
 
     <div id="app-ui">
-        <div id="entry-screen">
-            <div class="neon-title">ЛАБОРАТОРИЯ<br>ХОУКИНСА</div>
-            <button class="btn-enter" onclick="startApp()">ВОЙТИ</button>
-        </div>
-
         <div id="workspace">
             <div class="header"><h2>СПИСОК ЗАДАЧ</h2></div>
 
-            <div class="radio-box">
+            <!-- БЛОК РАДИО -->
+            <div class="control-box">
                 <div class="channel-row">
                     <div class="ch-btn active" onclick="setCh(0)">1</div>
                     <div class="ch-btn" onclick="setCh(1)">2</div>
@@ -236,8 +239,33 @@
                 <button class="play-btn" id="play-btn" onclick="toggleAudio()">НАЧАТЬ ЭФИР</button>
             </div>
 
+            <!-- БЛОК ПОМОДОРО (КОМПАКТНЫЙ) -->
+            <div class="control-box">
+                <!-- Строка 1: Время и Кнопки -->
+                <div class="timer-row-main">
+                    <div class="timer-digits" id="timer">25:00</div>
+                    <div class="timer-actions">
+                        <button class="t-btn-compact" id="t-start-btn" onclick="toggleTimer()">СТАРТ</button>
+                        <button class="t-btn-compact" onclick="stopTimer()">СБРОС</button>
+                        <!-- Кнопка Векны -->
+                        <button class="t-btn-vecna active" id="vecna-toggle" onclick="toggleVecna()">🔔</button>
+                    </div>
+                </div>
+                <!-- Строка 2: Настройки -->
+                <div class="timer-row-settings">
+                    <div class="setting-cell">
+                        <label>РАБОТА:</label>
+                        <input type="number" id="work-time" value="25" onchange="updateSettings()">
+                    </div>
+                    <div class="setting-cell">
+                        <label>ОТДЫХ:</label>
+                        <input type="number" id="break-time" value="5" onchange="updateSettings()">
+                    </div>
+                </div>
+            </div>
+
             <div class="input-row">
-                <input type="text" id="task-input" placeholder="НОВАЯ ЦЕЛЬ..." onkeydown="if(event.key==='Enter') addTask()">
+                <input type="text" id="task-input" placeholder="НОВАЯ ЗАДАЧА..." onkeydown="if(event.key==='Enter') addTask()">
                 <button class="add-btn" onclick="addTask()">+</button>
             </div>
 
@@ -251,112 +279,48 @@
         </div>
     </div>
 
+    <!-- АУДИО -->
     <audio id="audio" loop></audio>
+    <audio id="vecna-sfx" src="https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3"></audio>
 
     <script>
-        // --- КОНСТАНТА ХРАНИЛИЩА (ВЕЧНАЯ) ---
         const DB_KEY = 'STRANGER_THINGS_GOLD_DB';
-        
-        // Ключи старых версий для восстановления
-        const LEGACY_KEYS = [
-            'stas_tasks_final', 
-            'stas_tasks_final_elite',
-            'stas_tasks_elite',
-            'stas_tasks_proxied',
-            'stas_tasks_offline',
-            'stas_db_v3',
-            'stas_tasks_final_art'
-        ];
+        const LEGACY_KEYS = ['stas_tasks_final', 'stas_tasks_final_elite', 'stas_tasks_elite'];
 
         // --- ВОССТАНОВЛЕНИЕ ДАННЫХ ---
         function loadTasks() {
             let data = [];
             try {
-                // 1. Пробуем загрузить из основного хранилища
                 const saved = localStorage.getItem(DB_KEY);
                 if (saved) {
                     data = JSON.parse(saved);
                 } else {
-                    // 2. Если пусто, ищем в старых версиях (миграция)
-                    console.log("Основная база пуста, ищем в архивах...");
                     for (let key of LEGACY_KEYS) {
                         const legacyData = localStorage.getItem(key);
                         if (legacyData) {
                             try {
                                 const parsed = JSON.parse(legacyData);
                                 if (Array.isArray(parsed) && parsed.length > 0) {
-                                    console.log(`Найдено ${parsed.length} задач в ${key}`);
-                                    data = parsed; // Берем последние найденные
-                                    break; // Нашли - выходим
+                                    data = parsed; break;
                                 }
                             } catch(e) {}
                         }
                     }
-                    // Сохраняем найденное в новую базу сразу
-                    if (data.length > 0) {
-                        localStorage.setItem(DB_KEY, JSON.stringify(data));
-                    }
+                    if (data.length > 0) localStorage.setItem(DB_KEY, JSON.stringify(data));
                 }
-            } catch(e) {
-                console.error("Ошибка загрузки:", e);
-            }
+            } catch(e) {}
             return data || [];
         }
 
         let tasks = loadTasks();
 
-        // --- СПОРЫ ---
-        function initSpores() {
-            const container = document.getElementById('spores-container');
-            const sporeCount = 50; 
-            for (let i = 0; i < sporeCount; i++) {
-                const spore = document.createElement('div');
-                spore.classList.add('spore');
-                const startLeft = Math.random() * 100;
-                const size = Math.random() * 4 + 2; 
-                const duration = Math.random() * 5 + 5; 
-                const delay = Math.random() * 5; 
-                const swayDuration = Math.random() * 2 + 2; 
-                
-                spore.style.left = startLeft + '%';
-                spore.style.width = size + 'px';
-                spore.style.height = size + 'px';
-                spore.style.animation = `fall ${duration}s linear infinite ${delay}s, sway ${swayDuration}s ease-in-out infinite alternate`;
-                container.appendChild(spore);
-            }
-        }
-
-        // --- ГРОЗА ---
-        let thunderTimer;
-        function startThunderLoop() {
-            const delay = Math.random() * 5000 + 5000; 
-            thunderTimer = setTimeout(() => {
-                triggerLightning();
-                startThunderLoop(); 
-            }, delay);
-        }
-        function stopThunderLoop() { clearTimeout(thunderTimer); }
-        function triggerLightning() {
-            const light = document.getElementById('lightning');
-            light.classList.remove('flash-now');
-            void light.offsetWidth; 
-            light.classList.add('flash-now');
-        }
-
-        // --- АУДИО ---
+        // --- ЗВУКИ ---
         const songs = [
             "https://www.myinstants.com/media/sounds/st-int.mp3",
             "https://www.myinstants.com/media/sounds/stranger-things-maxs-music.mp3",
             "https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3"
         ];
         let curCh = 0;
-        
-        // Названия каналов для дисплея (чтобы совпадало с массивом songs)
-        const songNames = [
-            "THEME", 
-            "MAX'S SONG", 
-            "THE CLOCK"
-        ];
         
         const sfxClick = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
         const sfxDel = new Audio("https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3");
@@ -367,28 +331,139 @@
             s.play().catch(()=>{});
         }
 
-        function updateUI() {
-            // Берем имя из нового массива имен
-            //document.getElementById('track-name').innerText = songNames[currentChannel];
-            document.querySelectorAll('.ch-btn').forEach((b,i) => {
-                b.classList.toggle('active', i === curCh);
-            });
+        // --- ТАЙМЕР ПОМОДОРО ---
+        let timerInterval = null;
+        let timeLeft = 25 * 60; // Секунды
+        let isWorkSession = true;
+        let vecnaEnabled = true;
+
+        function toggleVecna() {
+            vecnaEnabled = !vecnaEnabled;
+            const btn = document.getElementById('vecna-toggle');
+            if (vecnaEnabled) btn.classList.add('active');
+            else btn.classList.remove('active');
         }
 
-        // --- ЛОГИКА ---
-        function startApp() {
-            document.getElementById('entry-screen').style.display = 'none';
-            document.getElementById('workspace').style.display = 'block';
+        function updateDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${m}:${s}`;
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    // ВЕКНА ЭФФЕКТ (на 25 секунде)
+                    if (timeLeft === 25 && vecnaEnabled) {
+                        const vecna = document.getElementById('vecna-sfx');
+                        vecna.currentTime = 0;
+                        vecna.volume = 0.8;
+                        vecna.play().catch(()=>{});
+                    }
+                    updateDisplay();
+                } else {
+                    // КОНЕЦ ТАЙМЕРА (00:00)
+                    if (vecnaEnabled) {
+                        // Финальный гонг (перезапуск звука для удара)
+                        const vecna = document.getElementById('vecna-sfx');
+                        vecna.currentTime = 0;
+                        vecna.play().catch(()=>{});
+                    } else {
+                        playSfx('del');
+                    }
+                    
+                    stopTimer();
+                    triggerLightning(); // Вспышка
+                    isWorkSession = !isWorkSession;
+                    resetTime();
+                }
+            }, 1000);
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('t-start-btn');
+            if (timerInterval) {
+                // Пауза
+                clearInterval(timerInterval);
+                timerInterval = null;
+                btn.innerText = "СТАРТ";
+                btn.classList.remove('active');
+                // Если часы били, ставим на паузу
+                document.getElementById('vecna-sfx').pause();
+            } else {
+                // Старт
+                btn.innerText = "ПАУЗА";
+                btn.classList.add('active');
+                startTimer();
+            }
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            const btn = document.getElementById('t-start-btn');
+            btn.innerText = "СТАРТ";
+            btn.classList.remove('active');
+            isWorkSession = true; 
+            document.getElementById('vecna-sfx').pause();
+            document.getElementById('vecna-sfx').currentTime = 0;
+            resetTime();
+        }
+
+        function resetTime() {
+            const work = parseInt(document.getElementById('work-time').value) || 25;
+            const brk = parseInt(document.getElementById('break-time').value) || 5;
+            timeLeft = (isWorkSession ? work : brk) * 60;
+            updateDisplay();
+        }
+
+        function updateSettings() {
+            if (!timerInterval) {
+                resetTime();
+            }
+        }
+
+        // --- СПОРЫ И ГРОЗА ---
+        function initSpores() {
+            const container = document.getElementById('spores-container');
+            for (let i = 0; i < 50; i++) {
+                const spore = document.createElement('div');
+                spore.classList.add('spore');
+                spore.style.left = Math.random() * 100 + '%';
+                const size = Math.random() * 4 + 2;
+                spore.style.width = size + 'px'; spore.style.height = size + 'px';
+                const dur = Math.random() * 5 + 5;
+                spore.style.animation = `fall ${dur}s linear infinite ${Math.random()*5}s, sway ${Math.random()*2+2}s ease-in-out infinite alternate`;
+                container.appendChild(spore);
+            }
+        }
+
+        let thunderTimer;
+        function startThunderLoop() {
+            thunderTimer = setTimeout(() => {
+                triggerLightning();
+                startThunderLoop(); 
+            }, Math.random() * 5000 + 5000);
+        }
+        function stopThunderLoop() { clearTimeout(thunderTimer); }
+        function triggerLightning() {
+            const light = document.getElementById('lightning');
+            light.classList.remove('flash-now');
+            void light.offsetWidth; 
+            light.classList.add('flash-now');
+        }
+
+        // --- ОСНОВНАЯ ЛОГИКА ---
+        function initApp() {
+            initSpores();
+            render();
+            initDrag();
+            resetTime(); 
             const au = document.getElementById('audio');
             au.src = songs[curCh];
             au.volume = 0.5;
-            
-            // Обновляем UI при старте
-            //document.getElementById('track-name').innerText = songNames[curCh];
-            
-            initSpores(); 
-            render();
-            initDrag();
         }
 
         function addTask() {
@@ -486,6 +561,9 @@
                 Sortable.create(document.getElementById('completed-list'), opts);
             }
         }
+
+        window.onload = initApp;
+
     </script>
 </body>
 </html>
