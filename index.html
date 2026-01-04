@@ -70,10 +70,12 @@
             position: fixed; inset: 0; z-index: 4; pointer-events: none;
             background: rgba(255, 255, 255, 0.15); mix-blend-mode: hard-light; opacity: 0;
         }
-        .flash-now { animation: thunder-strike 0.6s ease-out; }
+        .flash-now { animation: thunder-strike 0.3s ease-out; } /* Сделал молнию резче */
         @keyframes thunder-strike {
             0%, 100% { opacity: 0; }
-            5% { opacity: 0.8; } 15% { opacity: 0.6; }
+            10% { opacity: 0.9; background: rgba(255, 255, 255, 0.3); } 
+            50% { opacity: 0; }
+            60% { opacity: 0.4; }
         }
 
         /* --- ИНТЕРФЕЙС --- */
@@ -174,12 +176,15 @@
             background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 5px 8px;
         }
         .setting-cell label { font-size: 0.6rem; color: #666; text-transform: uppercase; white-space: nowrap; }
-        .setting-cell input {
-            width: 35px; background: transparent; border: none; text-align: right;
+        
+        /* СТИЛЬ ВЫПАДАЮЩИХ СПИСКОВ */
+        .setting-cell select {
+            width: 50px; background: transparent; border: none; 
             color: var(--red); font-weight: bold; font-family: inherit; font-size: 0.9rem;
-            outline: none; -moz-appearance: textfield;
+            outline: none; -webkit-appearance: none; appearance: none;
+            text-align: right; text-align-last: right; cursor: pointer;
         }
-        .setting-cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .setting-cell select::-ms-expand { display: none; }
 
         .status-badge {
             font-size: 0.7rem; color: #444; text-align: center; margin-top: 5px; 
@@ -208,12 +213,35 @@
             display: flex; align-items: center; gap: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             touch-action: none;
+            transition: transform 0.1s, box-shadow 0.1s; /* Для плавности глюка */
+        }
+
+        /* ГЛЮК-АНИМАЦИЯ ПРИ НАВЕДЕНИИ/ТАПЕ */
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); }
+            20% { transform: skew(-10deg) translateX(-2px); }
+            40% { transform: skew(10deg) translateX(2px); }
+            60% { transform: skew(-5deg); }
+            80% { transform: skew(5deg); }
+            100% { transform: skew(0deg); }
+        }
+
+        .task-item:hover, .task-item:active {
+            animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5), inset 0 0 10px rgba(255,0,0,0.2);
+            border-left-color: #fff;
+        }
+
+        .task-item:hover .task-text, .task-item:active .task-text {
+            color: #ff0000 !important;
+            text-shadow: 2px 0 blue, -2px 0 lime; /* Хроматическая аберрация */
         }
 
         .task-text {
             flex: 1; font-size: 1.1rem; color: #ffffff !important;
             font-weight: 800; text-transform: uppercase;
             text-shadow: 2px 2px 0 #000; letter-spacing: 0.5px;
+            transition: color 0.1s;
         }
 
         .task-item.completed { opacity: 0.6; border-left-color: #444; background: rgba(10,10,10,0.8); }
@@ -278,23 +306,23 @@
                     <button class="t-btn-sec" onclick="restoreTimerState()">↺ ОТКАТ</button>
                     <button class="t-btn-sec" onclick="forceBreak()">☕ ОТДЫХ (5 МИН)</button>
                 </div>
-                <!-- Строка 3: Настройки -->
+                <!-- Строка 3: Настройки (ВЫПАДАЮЩИЕ СПИСКИ) -->
                 <div class="timer-row-settings">
                     <div class="setting-cell">
                         <label>РАБОТА:</label>
-                        <input type="number" id="work-time" value="25" onchange="updateSettings()">
+                        <select id="work-time" onchange="updateSettings()"></select>
                     </div>
                     <div class="setting-cell">
                         <label>ОТДЫХ:</label>
-                        <input type="number" id="break-time" value="5" onchange="updateSettings()">
+                        <select id="break-time" onchange="updateSettings()"></select>
                     </div>
                     <div class="setting-cell">
                         <label>Б. ОТДЫХ:</label>
-                        <input type="number" id="long-break-time" value="15" onchange="updateSettings()">
+                        <select id="long-break-time" onchange="updateSettings()"></select>
                     </div>
                     <div class="setting-cell">
                         <label>ЦИКЛЫ:</label>
-                        <input type="number" id="cycles-target" value="4" onchange="updateSettings()">
+                        <select id="cycles-target" onchange="updateSettings()"></select>
                     </div>
                 </div>
                 <div class="status-badge" id="cycle-status">ЦИКЛ 1 / 4</div>
@@ -365,7 +393,18 @@
             s.play().catch(()=>{});
         }
 
-        // --- WAKE LOCK ---
+        // --- ГЛЮК-ЭФФЕКТ НА ТАП/ХОВЕР ---
+        function triggerGlitch() {
+            // Шанс 30% вызвать молнию при касании
+            if (Math.random() > 0.7) {
+                triggerLightning();
+            }
+            // Звук помех (очень тихий)
+            const staticNoise = sfxDel.cloneNode();
+            staticNoise.volume = 0.1;
+            staticNoise.play().catch(()=>{});
+        }
+
         let wakeLock = null;
         async function toggleWakeLock() {
             const btn = document.getElementById('wakelock-toggle');
@@ -381,7 +420,7 @@
                     });
                 } catch (err) {
                     console.error(err);
-                    alert("Браузер не дал доступ (нужен HTTPS)");
+                    alert("Браузер не дал доступ к экрану (нужен HTTPS)");
                 }
             } else {
                 wakeLock.release();
@@ -394,13 +433,29 @@
             }
         });
 
-        // --- ТАЙМЕР ПОМОДОРО ---
+        function initSelects() {
+            const createOptions = (target, min, max, def) => {
+                const sel = document.getElementById(target);
+                sel.innerHTML = '';
+                for(let i=min; i<=max; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.innerText = i;
+                    if(i === def) opt.selected = true;
+                    sel.appendChild(opt);
+                }
+            };
+            createOptions('work-time', 1, 60, 25);
+            createOptions('break-time', 1, 30, 5);
+            createOptions('long-break-time', 1, 60, 15);
+            createOptions('cycles-target', 1, 10, 4);
+        }
+
         let timerInterval = null;
         let timeLeft = 25 * 60; 
         let isWorkSession = true;
         let vecnaEnabled = true;
         let currentCycle = 1;
-        // История для отката
         let timerHistory = null;
 
         function saveTimerState() {
@@ -427,14 +482,13 @@
         }
 
         function forceBreak() {
-            saveTimerState(); // Сохраняем текущее состояние перед форсированием
+            saveTimerState(); 
             stopTimer();
-            isWorkSession = false; // Режим отдыха
+            isWorkSession = false; 
             const brk = parseInt(document.getElementById('break-time').value) || 5;
             timeLeft = brk * 60;
             updateDisplay();
             updateCycleStatus();
-            // Автостарт
             toggleTimer();
         }
 
@@ -476,12 +530,8 @@
         }
 
         function handleTimerComplete() {
-            // Перед завершением и сменой режима сохраняем состояние "как было в конце"
-            // Но лучше сохранять в начале следующего. 
-            // Логичнее сохранять ПЕРЕД сбросом.
             saveTimerState();
 
-            // Остановка звука Векны, если играл
             const vecna = document.getElementById('vecna-sfx');
             vecna.pause();
             vecna.currentTime = 0;
@@ -489,9 +539,7 @@
             stopTimer();
             triggerLightning();
             
-            // Финальный звук
             if (vecnaEnabled) {
-                // Перезапуск для удара
                 vecna.currentTime = 0;
                 vecna.play().catch(()=>{});
             } else {
@@ -524,18 +572,15 @@
         function toggleTimer() {
             const btn = document.getElementById('t-start-btn');
             if (timerInterval) {
-                // Пауза
                 clearInterval(timerInterval);
                 timerInterval = null;
                 btn.innerText = "СТАРТ";
                 btn.classList.remove('active');
                 document.getElementById('vecna-sfx').pause();
             } else {
-                // Старт
                 btn.innerText = "ПАУЗА";
                 btn.classList.add('active');
                 
-                // Тихий прогрев аудио
                 const vecna = document.getElementById('vecna-sfx');
                 vecna.muted = true; 
                 vecna.play().then(() => {
@@ -549,7 +594,7 @@
         }
 
         function stopTimer() {
-            saveTimerState(); // Сохраняем перед сбросом
+            saveTimerState();
             clearInterval(timerInterval);
             timerInterval = null;
             const btn = document.getElementById('t-start-btn');
@@ -570,13 +615,6 @@
             if (isWorkSession) {
                 timeLeft = work * 60;
             } else {
-                // Логика определения типа отдыха (обычный или большой)
-                // Если мы только что закончили цикл == targetCycles, то должен быть большой отдых.
-                // Проблема: мы уже переключили флаги в handleTimerComplete.
-                // Там мы поставили isWorkSession = false.
-                // Нужно проверить, был ли это последний цикл.
-                
-                // Упростим: если сейчас отдых, проверим текущий цикл
                 if (currentCycle >= targetCycles) {
                     timeLeft = longBrk * 60;
                 } else {
@@ -626,6 +664,7 @@
         }
 
         function initApp() {
+            initSelects();
             initSpores();
             render();
             initDrag();
@@ -645,7 +684,6 @@
             save(); render();
         }
 
-        // РЕДАКТИРОВАНИЕ
         function editTask(id) {
             const t = tasks.find(x => x.id === id);
             if (!t) return;
@@ -682,6 +720,10 @@
                 const li = document.createElement('li');
                 li.className = `task-item ${t.done ? 'completed' : ''}`;
                 li.dataset.id = t.id;
+                // ДОБАВЛЕН ОБРАБОТЧИК НАВЕДЕНИЯ/ТАПА ДЛЯ ГЛЮКА
+                li.onmouseenter = triggerGlitch;
+                li.ontouchstart = triggerGlitch;
+                
                 li.innerHTML = `
                     <div class="checkbox" onclick="toggle(${t.id})"></div>
                     <span class="task-text" onclick="toggle(${t.id})">${t.txt}</span>
