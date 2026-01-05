@@ -9,10 +9,8 @@
         :root {
             --red: #ff0000;
             --dark-red: #590000;
-            
-            /* Настройки шрифта */
             --task-font-size: 1.1rem;
-            --task-font-family: 'Courier New', Courier, monospace; /* Дефолтный шрифт */
+            --task-font-family: 'Courier New', Courier, monospace;
             
             --color-red: #ff0000;
             --color-yellow: #ffeb3b;
@@ -44,7 +42,7 @@
             transition: filter 0.2s;
         }
 
-        /* Эффект погружения (только для заголовка) */
+        /* Эффект погружения */
         body.invoking .bg-layer {
             filter: contrast(1.5) brightness(0.2) sepia(0.5) hue-rotate(-10deg);
             transition: filter 3s ease;
@@ -124,28 +122,6 @@
             animation: flicker 4s infinite alternate; 
             cursor: pointer;
             transition: all 3s ease; 
-            
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-        }
-
-        /* Эффект только для заголовка */
-        .glitch-active {
-            animation: glitch-anim 0.2s infinite linear !important;
-            color: #fff !important;
-            text-shadow: 4px 0 #ff0000, -4px 0 #0000ff !important;
-        }
-
-        @keyframes glitch-anim {
-            0% { transform: translate(0); }
-            20% { transform: translate(-5px, 5px) skewX(-10deg); }
-            40% { transform: translate(-5px, -5px) skewX(10deg); }
-            60% { transform: translate(5px, 5px) skewX(-5deg); }
-            80% { transform: translate(5px, -5px) skewX(5deg); }
-            100% { transform: translate(0); }
         }
 
         body.invoking .header h2 {
@@ -193,10 +169,11 @@
         .t-btn-compact:hover { border-color: var(--red); color: var(--red); }
         .t-btn-compact.active { background: var(--red); color: #000; border-color: var(--red); }
         
-        /* ИКОНКИ */
+        /* СТИЛЬНЫЕ SVG ИКОНКИ (ДЛЯ ВЕКНЫ И ЭКРАНА И НАСТРОЕК) */
         .t-btn-icon {
             flex: 0.6; background: transparent; border: 1px solid #444;
-            color: #888; cursor: pointer; transition: 0.2s;
+            color: #888; /* Базовый серый цвет */
+            cursor: pointer; transition: 0.2s;
             display: flex; align-items: center; justify-content: center; padding: 0;
             -webkit-tap-highlight-color: transparent;
         }
@@ -212,6 +189,7 @@
         }
         .t-btn-icon.active svg { stroke-width: 2.5; filter: drop-shadow(0 0 2px var(--red)); }
 
+        /* ВТОРОЙ РЯД (ОТКАТ / ОТДЫХ) */
         .timer-row-secondary {
             display: flex; gap: 5px; margin-bottom: 8px;
         }
@@ -222,7 +200,13 @@
             display: flex; align-items: center; justify-content: center; gap: 6px;
             transition: 0.2s;
         }
-        .t-btn-sec svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+        /* Принудительные размеры иконок */
+        .t-btn-sec svg {
+            width: 14px !important; height: 14px !important; 
+            min-width: 14px; min-height: 14px;
+            stroke: currentColor; fill: none; stroke-width: 2;
+        }
+
         @media (hover: hover) {
             .t-btn-sec:hover { border-color: var(--red); color: var(--red); }
         }
@@ -251,18 +235,26 @@
         }
 
         /* Ввод задач */
-        .input-row { display: flex; margin-bottom: 30px; position: relative; gap: 5px; }
+        .input-wrapper { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+        .input-row { display: flex; position: relative; gap: 5px; }
         #task-input {
             width: 100%; background: rgba(0,0,0,0.7); border: none; border-bottom: 2px solid var(--dark-red);
             color: #fff; font-size: 1.2rem; padding: 15px; padding-right: 60px; outline: none;
         }
         .add-btn {
-            width: 50px;
-            background: transparent; border: 1px solid var(--dark-red); color: var(--red); font-size: 2rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: 0.2s;
+            width: 50px; background: transparent; border: 1px solid var(--dark-red); color: var(--red); font-size: 2rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
         }
         .add-btn:active { background: var(--red); color: #000; }
+
+        .new-task-colors {
+            display: flex; gap: 10px; justify-content: flex-end; padding-right: 5px;
+        }
+        .new-color-opt {
+            width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+            border: 1px solid transparent; opacity: 0.5; transition: 0.2s;
+        }
+        .new-color-opt.selected { opacity: 1; transform: scale(1.2); border-color: #fff; box-shadow: 0 0 5px currentColor; }
 
         /* Списки */
         ul { list-style: none; padding: 0; margin: 0; }
@@ -276,10 +268,9 @@
             touch-action: none;
             position: relative;
             overflow: hidden;
-            /* УБРАЛИ ЛИШНИЕ ТРАНЗИШЕНЫ ЧТОБЫ НЕ ПЛЫЛО ПРИ ДРАГЕ */
         }
 
-        /* ЦВЕТОВЫЕ ВАРИАНТЫ ЗАДАЧ */
+        /* Цвета */
         .task-item.border-red { border-left-color: var(--color-red); }
         .task-item.border-yellow { border-left-color: var(--color-yellow); }
         .task-item.border-blue { border-left-color: var(--color-blue); }
@@ -287,13 +278,9 @@
         .task-item.border-grey { border-left-color: var(--color-grey); }
 
         .task-text {
-            flex: 1; 
-            font-size: var(--task-font-size); 
-            font-family: var(--task-font-family); /* Применяем шрифт */
-            color: #ffffff !important;
-            font-weight: 800; text-transform: uppercase;
-            text-shadow: 2px 2px 0 #000; letter-spacing: 0.5px;
-            z-index: 2;
+            flex: 1; font-size: var(--task-font-size); font-family: var(--task-font-family);
+            color: #ffffff !important; font-weight: 800; text-transform: uppercase;
+            text-shadow: 2px 2px 0 #000; letter-spacing: 0.5px; z-index: 2;
         }
 
         .task-item.completed { opacity: 0.6; border-left-color: #444 !important; background: rgba(10,10,10,0.8); }
@@ -312,19 +299,15 @@
         .btn-del:hover { color: var(--red); }
         
         .sortable-ghost { opacity: 0; }
-        
         .sortable-drag { 
-            background: #000; 
-            border: 2px solid var(--red); 
-            opacity: 1 !important; 
-            transform: scale(1.05); 
-            z-index: 100;
+            background: #000; border: 2px solid var(--red); opacity: 1 !important; 
+            transform: scale(1.05); z-index: 100; transition: none !important;
         }
 
         .list-title { color: #888; font-size: 0.8rem; text-align: center; margin-bottom: 10px; letter-spacing: 2px; text-shadow: 1px 1px 2px #000; text-transform: uppercase; }
         #completed-list { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #333; }
 
-        /* --- МОДАЛЬНЫЕ ОКНА --- */
+        /* Модальные окна */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999;
             display: none; align-items: center; justify-content: center;
@@ -335,10 +318,16 @@
         .modal-box {
             background: #111; border: 2px solid var(--red); padding: 20px;
             width: 90%; max-width: 400px; box-shadow: 0 0 20px var(--dark-red);
+            display: flex; flex-direction: column; align-items: center;
         }
         
         .modal-title { color: var(--red); font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; text-align: center; }
         
+        .edit-textarea {
+            width: 100%; height: 100px; background: #000; border: 1px solid #444; color: #fff;
+            padding: 10px; font-size: 1.1rem; margin-bottom: 15px; font-family: inherit; resize: none;
+        }
+
         .range-slider {
             width: 100%; -webkit-appearance: none; background: #333; height: 4px; outline: none; margin: 20px 0;
         }
@@ -351,24 +340,21 @@
             font-size: 1rem; margin-bottom: 15px; outline: none; cursor: pointer;
         }
 
-        .color-options { display: flex; justify-content: space-between; margin: 15px 0; }
+        .color-options { display: flex; justify-content: space-between; width: 100%; margin: 15px 0; }
         .color-opt {
             width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
             border: 2px solid transparent; transition: transform 0.2s;
         }
         .color-opt.selected { transform: scale(1.3); border-color: #fff; box-shadow: 0 0 10px currentColor; }
         
-        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; width: 100%; }
         .modal-btn {
             flex: 1; padding: 10px; border: 1px solid #444; background: transparent; color: #fff; font-weight: bold; cursor: pointer; text-transform: uppercase;
         }
         .modal-btn.primary { border-color: var(--red); color: var(--red); }
         .modal-btn:active { background: #333; }
 
-        .edit-input {
-            width: 100%; background: #000; border: 1px solid #444; color: #fff;
-            padding: 10px; font-size: 1.1rem; margin-bottom: 15px;
-        }
+        .alarm-msg { font-size: 1.5rem; text-align: center; margin-bottom: 20px; font-weight: bold; color: #fff; }
 
     </style>
 </head>
@@ -410,16 +396,16 @@
                     <div class="timer-digits" id="timer">25:00</div>
                     <div class="timer-actions">
                         <button class="t-btn-compact" id="t-start-btn" onclick="toggleTimer()">СТАРТ</button>
-                        <button class="t-btn-compact" onclick="stopTimer()">СБРОС</button>
-                        
+                        <button class="t-btn-compact" onclick="fullReset()">СБРОС</button>
+                        <button class="t-btn-icon" title="След. этап" onclick="forceNextStep()">
+                           <svg viewBox="0 0 24 24"><path d="M5 4l10 8l-10 8V4z"/><rect x="17" y="4" width="2" height="16"/></svg>
+                        </button>
                         <button class="t-btn-icon active" id="vecna-toggle" onclick="toggleVecna()">
                             <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                         </button>
-                        
                         <button class="t-btn-icon" id="wakelock-toggle" onclick="toggleWakeLock()">
                             <svg id="icon-screen" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="2"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>
                         </button>
-
                         <button class="t-btn-icon" onclick="openSettingsModal()">
                             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         </button>
@@ -458,9 +444,19 @@
                 <div class="status-badge" id="cycle-status">ЦИКЛ 1 / 4</div>
             </div>
 
-            <div class="input-row">
-                <input type="text" id="task-input" placeholder="НОВАЯ ЗАДАЧА..." onkeydown="if(event.key==='Enter') addTask()">
-                <button class="add-btn" onclick="addTask()">+</button>
+            <div class="input-wrapper">
+                <div class="input-row">
+                    <input type="text" id="task-input" placeholder="НОВАЯ ЗАДАЧА..." onkeydown="if(event.key==='Enter') addTask()">
+                    <button class="add-btn" onclick="addTask()">+</button>
+                </div>
+                <!-- Выбор цвета для новой задачи -->
+                <div class="new-task-colors">
+                    <div class="new-color-opt" style="background:var(--color-grey)" onclick="selectNewColor('grey')" id="new-col-grey"></div>
+                    <div class="new-color-opt selected" style="background:var(--color-red)" onclick="selectNewColor('red')" id="new-col-red"></div>
+                    <div class="new-color-opt" style="background:var(--color-yellow)" onclick="selectNewColor('yellow')" id="new-col-yellow"></div>
+                    <div class="new-color-opt" style="background:var(--color-blue)" onclick="selectNewColor('blue')" id="new-col-blue"></div>
+                    <div class="new-color-opt" style="background:var(--color-green)" onclick="selectNewColor('green')" id="new-col-green"></div>
+                </div>
             </div>
 
             <div class="list-title">АКТИВНЫЕ</div>
@@ -473,14 +469,12 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА НАСТРОЕК (ШРИФТ + ВИД) -->
+    <!-- МОДАЛКА НАСТРОЕК -->
     <div id="settings-modal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title">НАСТРОЙКИ СИСТЕМЫ</div>
-            
             <div style="color:#aaa; font-size:0.8rem; margin-bottom:10px;">РАЗМЕР ШРИФТА</div>
             <input type="range" class="range-slider" id="font-size-slider" min="12" max="32" step="1" oninput="updateFontSize(this.value)">
-            
             <div style="color:#aaa; font-size:0.8rem; margin:15px 0 5px;">СТИЛЬ ШРИФТА</div>
             <select id="font-family-select" class="font-select" onchange="updateFontFamily(this.value)">
                 <option value="'Courier New', Courier, monospace">Секретные материалы (Default)</option>
@@ -489,21 +483,18 @@
                 <option value="'Arial Black', sans-serif">Советский Плакат</option>
                 <option value="'Lucida Console', monospace">Цифровой Код</option>
             </select>
-
             <div style="text-align:center; color:#fff; font-size:1.1rem; margin-top:20px;" id="font-preview">ТЕКСТ ПРИМЕР</div>
-            
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeSettingsModal()">ЗАКРЫТЬ</button>
             </div>
         </div>
     </div>
 
-    <!-- МОДАЛКА РЕДАКТИРОВАНИЯ (ТЕКСТ + ЦВЕТ) -->
+    <!-- МОДАЛКА РЕДАКТИРОВАНИЯ -->
     <div id="edit-modal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title">РЕДАКТИРОВАНИЕ</div>
-            <input type="text" id="edit-task-input" class="edit-input">
-            
+            <textarea id="edit-task-input" class="edit-textarea"></textarea>
             <div style="color:#aaa; font-size:0.8rem; margin-bottom:10px;">ЦВЕТ ОКАНТОВКИ</div>
             <div class="color-options">
                 <div class="color-opt" style="background:var(--color-grey)" onclick="selectColor('grey')" id="col-grey"></div>
@@ -512,7 +503,6 @@
                 <div class="color-opt" style="background:var(--color-blue)" onclick="selectColor('blue')" id="col-blue"></div>
                 <div class="color-opt" style="background:var(--color-green)" onclick="selectColor('green')" id="col-green"></div>
             </div>
-
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeEditModal()">ОТМЕНА</button>
                 <button class="modal-btn primary" onclick="saveEditTask()">СОХРАНИТЬ</button>
@@ -520,9 +510,22 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ГОНГА -->
+    <div id="alarm-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title" style="color:var(--red); font-size:1.5rem;">ВНИМАНИЕ</div>
+            <div id="alarm-message" class="alarm-msg"></div>
+            <div class="modal-actions" style="flex-direction:column; gap:15px;">
+                <button class="modal-btn primary" style="font-size:1.2rem; padding:15px;" onclick="continueCycle()">ПРОДОЛЖИТЬ</button>
+                <button class="modal-btn" onclick="stopGongSound()">СТОП ЗВУК</button>
+            </div>
+        </div>
+    </div>
+
     <!-- АУДИО -->
     <audio id="audio" loop></audio>
     <audio id="vecna-sfx" src="https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3"></audio>
+    <audio id="gong-sfx" src="https://www.myinstants.com/media/sounds/undertakers-bell-1.mp3" loop></audio>
 
     <script>
         const DB_KEY = 'STRANGER_THINGS_GOLD_DB';
@@ -530,13 +533,13 @@
 
         let currentEditId = null;
         let selectedColor = 'red';
+        let newSelectedColor = 'red';
         let currentFontSize = 1.1;
         let currentFontFamily = "'Courier New', Courier, monospace";
 
         function loadTasks() {
             let data = [];
             try {
-                // Загружаем шрифт
                 const savedFontSize = localStorage.getItem('stas_font_size');
                 if (savedFontSize) {
                     currentFontSize = parseFloat(savedFontSize);
@@ -547,12 +550,10 @@
                     currentFontFamily = savedFontFamily;
                     document.documentElement.style.setProperty('--task-font-family', currentFontFamily);
                 }
-
                 const saved = localStorage.getItem(DB_KEY);
                 if (saved) {
                     data = JSON.parse(saved);
                 } else {
-                    // Миграция
                     for (let key of LEGACY_KEYS) {
                         const legacyData = localStorage.getItem(key);
                         if (legacyData) {
@@ -588,103 +589,30 @@
             s.play().catch(()=>{});
         }
 
-        // --- НАСТРОЙКИ (ШРИФТ) ---
-        function openSettingsModal() {
-            document.getElementById('settings-modal').classList.add('open');
-            // Размер
-            const val = Math.round(currentFontSize * 16);
-            document.getElementById('font-size-slider').value = val;
-            // Стиль
-            document.getElementById('font-family-select').value = currentFontFamily;
-            // Превью
-            updatePreview();
-        }
-        
-        function closeSettingsModal() {
-            document.getElementById('settings-modal').classList.remove('open');
-        }
-        
-        function updateFontSize(pxVal) {
-            const remVal = pxVal / 16;
-            currentFontSize = remVal;
-            document.documentElement.style.setProperty('--task-font-size', remVal + 'rem');
-            localStorage.setItem('stas_font_size', remVal);
-            updatePreview();
+        function triggerHeaderGlitch() {
+            const h = document.getElementById('main-header');
+            if (h.classList.contains('glitch-active')) return;
+            h.classList.add('glitch-active');
+            if (Math.random() > 0.5) triggerLightning();
+            setTimeout(() => { h.classList.remove('glitch-active'); }, 600);
         }
 
-        function updateFontFamily(val) {
-            currentFontFamily = val;
-            document.documentElement.style.setProperty('--task-font-family', val);
-            localStorage.setItem('stas_font_family', val);
-            updatePreview();
-        }
-
-        function updatePreview() {
-            const p = document.getElementById('font-preview');
-            p.style.fontSize = currentFontSize + 'rem';
-            p.style.fontFamily = currentFontFamily;
-        }
-
-        // --- РЕДАКТИРОВАНИЕ (МОДАЛКА) ---
-        function openEditModal(id) {
-            const t = tasks.find(x => x.id === id);
-            if (!t) return;
-            currentEditId = id;
-            document.getElementById('edit-task-input').value = t.txt;
-            
-            const col = t.color || 'red';
-            selectColor(col);
-            
-            document.getElementById('edit-modal').classList.add('open');
-        }
-
-        function closeEditModal() {
-            document.getElementById('edit-modal').classList.remove('open');
-            currentEditId = null;
-        }
-
-        function selectColor(color) {
-            selectedColor = color;
-            document.querySelectorAll('.color-opt').forEach(el => el.classList.remove('selected'));
-            document.getElementById('col-' + color).classList.add('selected');
-        }
-
-        function saveEditTask() {
-            if (!currentEditId) return;
-            const newTxt = document.getElementById('edit-task-input').value.trim();
-            if (newTxt) {
-                const t = tasks.find(x => x.id === currentEditId);
-                if (t) {
-                    t.txt = newTxt;
-                    t.color = selectedColor;
-                    save(); render();
-                }
-            }
-            closeEditModal();
-        }
-
-        // --- ЛОГИКА ПОГРУЖЕНИЯ (INVOCATION) ---
+        // --- ЛОГИКА ПОГРУЖЕНИЯ ---
         let invokeInterval = null;
-        
         function startInvocation(e) {
-            if (e.type === 'touchstart') {
-                // e.preventDefault(); 
-            }
-            
+            if (e.type === 'touchstart') {}
             document.body.classList.add('invoking');
             triggerLightning();
             invokeInterval = setInterval(() => {
-                if (Math.random() > 0.6) {
-                    triggerLightning();
-                }
+                if (Math.random() > 0.6) triggerLightning();
             }, 800); 
         }
-
         function stopInvocation() {
             document.body.classList.remove('invoking');
             clearInterval(invokeInterval);
         }
 
+        // --- WAKE LOCK ---
         let wakeLock = null;
         const iconScreenOff = '<rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="2"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/>';
         const iconScreenOn = '<rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="2"/><path d="M12 10v4" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/>';
@@ -692,7 +620,6 @@
         async function toggleWakeLock() {
             const btn = document.getElementById('wakelock-toggle');
             const iconSvg = document.getElementById('icon-screen');
-            
             if (!wakeLock) {
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
@@ -736,12 +663,14 @@
             createOptions('cycles-target', 1, 10, 4);
         }
 
+        // --- ТАЙМЕР ПОМОДОРО ---
         let timerInterval = null;
-        let timeLeft = 25 * 60; 
+        let timeLeft = 0; 
         let isWorkSession = true;
         let vecnaEnabled = true;
         let currentCycle = 1;
         let timerHistory = null;
+        let timerEndTime = 0;
 
         function saveTimerState() {
             timerHistory = {
@@ -752,12 +681,9 @@
         }
 
         function restoreTimerState() {
-            if (!timerHistory) {
-                alert("Нет данных для восстановления!");
-                return;
-            }
-            if (confirm("ТОЧНО ХОТИТЕ ВЕРНУТЬСЯ К ПРЕДЫДУЩЕМУ ШАГУ?")) {
-                stopTimer(); // Останавливаем текущий
+            if (!timerHistory) { alert("Нет данных!"); return; }
+            if (confirm("ВЕРНУТЬСЯ НА ШАГ НАЗАД?")) {
+                stopTicking();
                 timeLeft = timerHistory.timeLeft;
                 isWorkSession = timerHistory.isWorkSession;
                 currentCycle = timerHistory.currentCycle;
@@ -766,9 +692,13 @@
             }
         }
 
+        function forceNextStep() {
+             handleTimerComplete();
+        }
+
         function forceBreak() {
             saveTimerState(); 
-            stopTimer();
+            stopTicking();
             isWorkSession = false; 
             const brk = parseInt(document.getElementById('break-time').value) || 5;
             timeLeft = brk * 60;
@@ -798,70 +728,109 @@
 
         function startTimer() {
             if (timerInterval) return;
+            timerEndTime = Date.now() + timeLeft * 1000;
+            
             timerInterval = setInterval(() => {
-                if (timeLeft > 0) {
-                    timeLeft--;
-                    if (timeLeft === 25 && vecnaEnabled) {
+                const now = Date.now();
+                const diff = Math.ceil((timerEndTime - now) / 1000);
+                
+                if (diff >= 0) {
+                    timeLeft = diff;
+                    if (isWorkSession && timeLeft === 25 && vecnaEnabled) {
                         const vecna = document.getElementById('vecna-sfx');
                         vecna.currentTime = 0;
                         vecna.volume = 0.8;
                         vecna.play().catch(()=>{});
                     }
                     updateDisplay();
-                } else {
+                } 
+                
+                if (diff <= 0) {
+                    timeLeft = 0;
+                    updateDisplay();
                     handleTimerComplete();
                 }
-            }, 1000);
+            }, 500); 
+        }
+
+        // Just stops the interval and updates UI, preserves state
+        function stopTicking() {
+             if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            const btn = document.getElementById('t-start-btn');
+            btn.innerText = "СТАРТ";
+            btn.classList.remove('active');
+            
+            const vecna = document.getElementById('vecna-sfx');
+            vecna.pause(); vecna.currentTime = 0;
+        }
+
+        // The full RESET action
+        function fullReset() {
+            saveTimerState();
+            stopTicking();
+            isWorkSession = true;
+            currentCycle = 1;
+            resetTime();
         }
 
         function handleTimerComplete() {
-            saveTimerState();
-
-            const vecna = document.getElementById('vecna-sfx');
-            vecna.pause();
-            vecna.currentTime = 0;
-
-            stopTimer();
+            stopTicking(); // Just stop the interval
             triggerLightning();
-            
-            if (vecnaEnabled) {
-                vecna.currentTime = 0;
-                vecna.play().catch(()=>{});
-            } else {
-                playSfx('del');
-            }
 
             const targetCycles = parseInt(document.getElementById('cycles-target').value) || 4;
-
+            let nextModeMsg = "";
+            
             if (isWorkSession) {
+                // Work -> Break
                 if (currentCycle >= targetCycles) {
-                    alert("ОТЛИЧНАЯ РАБОТА! ВРЕМЯ БОЛЬШОГО ОТДЫХА.");
-                    isWorkSession = false; 
+                    nextModeMsg = "СДЕЛАТЬ БОЛЬШОЙ ПЕРЕРЫВ";
                 } else {
-                    alert("ВРЕМЯ ОТДЫХА.");
-                    isWorkSession = false;
+                    nextModeMsg = "СДЕЛАТЬ ПЕРЕРЫВ";
                 }
+                isWorkSession = false;
             } else {
+                // Break -> Work
+                nextModeMsg = "ПРОДОЛЖИТЬ РАБОТУ";
+                isWorkSession = true;
                 if (currentCycle >= targetCycles) {
-                    currentCycle = 1;
+                    currentCycle = 1; 
                 } else {
                     currentCycle++;
                 }
-                alert("ВРЕМЯ РАБОТЫ.");
-                isWorkSession = true;
             }
             
-            resetTime();
+            resetTime(); // Update time for next step
+
+            playGong();
+            document.getElementById('alarm-message').innerText = nextModeMsg;
+            document.getElementById('alarm-modal').classList.add('open');
+        }
+        
+        function playGong() {
+            const gong = document.getElementById('gong-sfx');
+            gong.currentTime = 0;
+            gong.play().catch(()=>{});
+        }
+        
+        function stopGongSound() {
+             const gong = document.getElementById('gong-sfx');
+             gong.pause();
+             gong.currentTime = 0;
+        }
+
+        function continueCycle() {
+            stopGongSound();
+            document.getElementById('alarm-modal').classList.remove('open');
+            toggleTimer(); 
         }
 
         function toggleTimer() {
             const btn = document.getElementById('t-start-btn');
             if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                btn.innerText = "СТАРТ";
-                btn.classList.remove('active');
-                document.getElementById('vecna-sfx').pause();
+                stopTicking();
             } else {
                 btn.innerText = "ПАУЗА";
                 btn.classList.add('active');
@@ -878,17 +847,11 @@
             }
         }
 
+        // Renamed from stopTimer to avoid confusion. Now handled by fullReset or stopTicking
         function stopTimer() {
-            saveTimerState();
-            clearInterval(timerInterval);
-            timerInterval = null;
-            const btn = document.getElementById('t-start-btn');
-            btn.innerText = "СТАРТ";
-            btn.classList.remove('active');
-            isWorkSession = true; 
-            document.getElementById('vecna-sfx').pause();
-            document.getElementById('vecna-sfx').currentTime = 0;
-            resetTime();
+            // This function is kept for the HTML onclick="stopTimer()" compatibility if needed
+            // But we changed HTML to call fullReset() for "СБРОС"
+            fullReset();
         }
 
         function resetTime() {
@@ -901,6 +864,13 @@
                 timeLeft = work * 60;
             } else {
                 if (currentCycle >= targetCycles) {
+                    // Logic fix: if we just finished cycle 4 work, we are in break phase of cycle 4.
+                    // Actually usually Big Break happens AFTER the last work session of a set.
+                    // Since we increment cycle at start of Work, 
+                    // Cycle 1 Work -> Cycle 1 Break -> Cycle 2 Work ... -> Cycle 4 Work -> Cycle 4 Break (Big?)
+                    // Let's assume big break is at the end of the target cycle.
+                    // We are currently in Break mode (isWorkSession == false).
+                    // And currentCycle == targetCycles (e.g. 4).
                     timeLeft = longBrk * 60;
                 } else {
                     timeLeft = brk * 60;
@@ -917,6 +887,73 @@
             } else {
                 updateCycleStatus();
             }
+        }
+
+        // --- ЦВЕТА ---
+        function selectNewColor(color) {
+            newSelectedColor = color;
+            document.querySelectorAll('.new-color-opt').forEach(el => el.classList.remove('selected'));
+            document.getElementById('new-col-' + color).classList.add('selected');
+        }
+
+        // --- ШРИФТ И НАСТРОЙКИ ---
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.add('open');
+            const val = Math.round(currentFontSize * 16);
+            document.getElementById('font-size-slider').value = val;
+            document.getElementById('font-family-select').value = currentFontFamily;
+            updatePreview();
+        }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.remove('open'); }
+        function updateFontSize(pxVal) {
+            const remVal = pxVal / 16;
+            currentFontSize = remVal;
+            document.documentElement.style.setProperty('--task-font-size', remVal + 'rem');
+            localStorage.setItem('stas_font_size', remVal);
+            updatePreview();
+        }
+        function updateFontFamily(val) {
+            currentFontFamily = val;
+            document.documentElement.style.setProperty('--task-font-family', val);
+            localStorage.setItem('stas_font_family', val);
+            updatePreview();
+        }
+        function updatePreview() {
+            const p = document.getElementById('font-preview');
+            p.style.fontSize = currentFontSize + 'rem';
+            p.style.fontFamily = currentFontFamily;
+        }
+
+        // --- РЕДАКТИРОВАНИЕ ---
+        function openEditModal(id) {
+            const t = tasks.find(x => x.id === id);
+            if (!t) return;
+            currentEditId = id;
+            document.getElementById('edit-task-input').value = t.txt;
+            
+            const col = t.color || 'red';
+            selectColor(col);
+            
+            document.getElementById('edit-modal').classList.add('open');
+        }
+        function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); currentEditId = null; }
+        function selectColor(color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-opt').forEach(el => el.classList.remove('selected'));
+            document.getElementById('col-' + color).classList.add('selected');
+        }
+        function saveEditTask() {
+            if (!currentEditId) return;
+            const newTxt = document.getElementById('edit-task-input').value.trim();
+            if (newTxt) {
+                const t = tasks.find(x => x.id === currentEditId);
+                if (t) {
+                    t.txt = newTxt;
+                    t.color = selectedColor;
+                    save(); render();
+                }
+            }
+            closeEditModal();
         }
 
         function initSpores() {
@@ -964,7 +1001,7 @@
             const val = inp.value.trim();
             if(!val) return;
             // Цвет по умолчанию - красный
-            tasks.push({ id: Date.now(), txt: val, done: false, color: 'red' });
+            tasks.push({ id: Date.now(), txt: val, done: false, color: newSelectedColor });
             inp.value = '';
             playSfx('click');
             save(); render();
@@ -1038,8 +1075,6 @@
                 stopThunderLoop(); 
             }
         }
-
-        // Глюк-эффект убрал по просьбе, функция осталась пустой или удалена
 
         function initDrag() {
             if(typeof Sortable !== 'undefined') {
