@@ -123,7 +123,7 @@
             color: #1a0000; text-shadow: 0 0 5px #000; transform: scale(0.98);
         }
 
-        /* БЛОКИ УПРАВЛЕНИЯ */
+        /* БЛОКИ */
         .control-box {
             background: rgba(20, 0, 0, 0.85); border: 1px solid var(--dark-red);
             padding: 15px; margin-bottom: 20px; backdrop-filter: blur(5px);
@@ -159,27 +159,36 @@
 
         /* Ряд 2: Текстовые кнопки */
         .timer-controls-row {
-            display: flex; gap: 10px; margin-bottom: 10px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; /* Ровная сетка */
+            gap: 10px; margin-bottom: 10px; width: 100%;
         }
         .t-btn-text {
-            flex: 1; background: transparent; border: 1px solid var(--dark-red);
+            background: transparent; border: 1px solid var(--dark-red);
             color: #ccc; font-weight: bold; font-size: 0.9rem; padding: 12px 0;
             cursor: pointer; text-transform: uppercase; transition: 0.2s;
+            width: 100%;
         }
         .t-btn-text:hover { border-color: var(--red); color: var(--red); }
         .t-btn-text.active { background: var(--red); color: #000; border-color: var(--red); }
 
-        /* Ряд 3: Иконки */
+        /* Ряд 3: Иконки (ИСПРАВЛЕНА СЕТКА) */
         .timer-icons-row {
-            display: flex; gap: 10px; margin-bottom: 15px;
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); /* 5 равных колонок */
+            gap: 8px; margin-bottom: 15px; width: 100%;
         }
         .t-btn-icon {
-            flex: 1; background: transparent; border: 1px solid #444;
+            background: transparent; border: 1px solid #444;
             color: #888; cursor: pointer; transition: 0.2s;
             display: flex; align-items: center; justify-content: center; padding: 12px 0;
             -webkit-tap-highlight-color: transparent;
+            width: 100%;
         }
-        .t-btn-icon svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2; fill: none; }
+        /* ЖЕСТКИЙ РАЗМЕР ДЛЯ ИКОНОК */
+        .t-btn-icon svg { 
+            width: 22px; height: 22px; min-width: 22px; min-height: 22px;
+            stroke: currentColor; stroke-width: 2; fill: none; 
+        }
         @media (hover: hover) { .t-btn-icon:hover { border-color: var(--red); color: var(--red); } }
         
         .t-btn-icon.active { 
@@ -190,9 +199,12 @@
 
         /* Настройки в подвале */
         .timer-row-settings {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; 
-            border-top: 1px dashed #333; padding-top: 15px;
+            display: none; /* Скрыто */
+            grid-template-columns: 1fr 1fr; gap: 10px; 
+            border-top: 1px dashed #333; padding-top: 15px; margin-top: 15px;
         }
+        .timer-row-settings.visible { display: grid; } /* Показать */
+
         .setting-cell {
             display: flex; align-items: center; justify-content: space-between;
             background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 8px 10px;
@@ -380,7 +392,7 @@
                     <button class="t-btn-text" onclick="restoreTimerState()">ОТКАТ</button>
                 </div>
 
-                <!-- 3. ИКОНКИ (ЭТАЖ 3) -->
+                <!-- 3. ИКОНКИ (ЭТАЖ 3 - РОВНАЯ СЕТКА) -->
                 <div class="timer-icons-row">
                     <!-- След. этап -->
                     <button class="t-btn-icon" title="След. этап" onclick="forceNextStep()">
@@ -394,14 +406,20 @@
                     <button class="t-btn-icon" id="wakelock-toggle" onclick="toggleWakeLock()">
                         <svg id="icon-screen" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="2"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>
                     </button>
-                    <!-- Настройки -->
+                    
+                    <!-- Кнопка часов для скрытия настроек -->
+                    <button class="t-btn-icon" id="timer-settings-toggle" onclick="toggleTimerSettings()">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </button>
+
+                    <!-- Настройки (Шестеренка) -->
                     <button class="t-btn-icon" onclick="openSettingsModal()">
                         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     </button>
                 </div>
                 
-                <!-- 4. НАСТРОЙКИ (ПОДВАЛ) -->
-                <div class="timer-row-settings">
+                <!-- 5. НАСТРОЙКИ (СКРЫТЫЕ ПО УМОЛЧАНИЮ) -->
+                <div class="timer-row-settings" id="timer-settings-panel">
                     <div class="setting-cell">
                         <label>РАБОТА:</label>
                         <select id="work-time" onchange="updateSettings()"></select>
@@ -419,6 +437,8 @@
                         <select id="cycles-target" onchange="updateSettings()"></select>
                     </div>
                 </div>
+                
+                <!-- Статус цикла ВСЕГДА ВИДЕН -->
                 <div class="status-badge" id="cycle-status">ЦИКЛ 1 / 4</div>
             </div>
 
@@ -427,6 +447,7 @@
                     <input type="text" id="task-input" placeholder="НОВАЯ ЗАДАЧА..." onkeydown="if(event.key==='Enter') addTask()">
                     <button class="add-btn" onclick="addTask()">+</button>
                 </div>
+                <!-- Выбор цвета для новой задачи -->
                 <div class="new-task-colors">
                     <div class="new-color-opt" style="background:var(--color-grey)" onclick="selectNewColor('grey')" id="new-col-grey"></div>
                     <div class="new-color-opt selected" style="background:var(--color-red)" onclick="selectNewColor('red')" id="new-col-red"></div>
@@ -446,7 +467,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛКИ -->
+    <!-- МОДАЛКА НАСТРОЕК -->
     <div id="settings-modal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title">НАСТРОЙКИ СИСТЕМЫ</div>
@@ -467,6 +488,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА РЕДАКТИРОВАНИЯ -->
     <div id="edit-modal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title">РЕДАКТИРОВАНИЕ</div>
@@ -486,6 +508,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА ГОНГА -->
     <div id="alarm-modal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-title" style="color:var(--red); font-size:1.5rem;">ВНИМАНИЕ</div>
@@ -497,6 +520,7 @@
         </div>
     </div>
 
+    <!-- АУДИО -->
     <audio id="audio" loop></audio>
     <audio id="vecna-sfx" src="https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3"></audio>
     <audio id="gong-sfx" src="https://www.myinstants.com/media/sounds/undertakers-bell-1.mp3" loop></audio>
@@ -514,6 +538,7 @@
         function loadTasks() {
             let data = [];
             try {
+                // Загружаем шрифт
                 const savedFontSize = localStorage.getItem('stas_font_size');
                 if (savedFontSize) {
                     currentFontSize = parseFloat(savedFontSize);
@@ -571,6 +596,7 @@
             setTimeout(() => { h.classList.remove('glitch-active'); }, 600);
         }
 
+        // --- ЛОГИКА ПОГРУЖЕНИЯ ---
         let invokeInterval = null;
         function startInvocation(e) {
             if (e.type === 'touchstart') {}
@@ -585,6 +611,7 @@
             clearInterval(invokeInterval);
         }
 
+        // --- WAKE LOCK ---
         let wakeLock = null;
         const iconScreenOff = '<rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="2"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/>';
         const iconScreenOn = '<rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="2"/><path d="M12 10v4" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/>';
@@ -617,6 +644,7 @@
             }
         });
 
+        // --- ЛОГИКА ТАЙМЕРА И НАСТРОЕК ---
         function initSelects() {
             const createOptions = (target, min, max, def) => {
                 const sel = document.getElementById(target);
@@ -635,7 +663,22 @@
             createOptions('cycles-target', 1, 10, 4);
         }
 
-        // --- ТАЙМЕР ПОМОДОРО ---
+        // Переключение видимости настроек
+        function toggleTimerSettings() {
+            const settingsPanel = document.getElementById('timer-settings-panel');
+            const toggleBtn = document.getElementById('timer-settings-toggle');
+            
+            // Если класс есть, значит сейчас настройки ВИДИМЫЕ -> скрываем
+            if (settingsPanel.classList.contains('visible')) {
+                settingsPanel.classList.remove('visible');
+                toggleBtn.classList.remove('active');
+            } else {
+                // Если класса нет, значит скрыты -> показываем
+                settingsPanel.classList.add('visible');
+                toggleBtn.classList.add('active');
+            }
+        }
+
         let timerInterval = null;
         let timeLeft = 0; 
         let isWorkSession = true;
