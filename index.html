@@ -131,15 +131,21 @@
         }
 
         /* Радио */
-        .channel-row { display: flex; gap: 5px; margin-bottom: 10px; }
+        .channel-row { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 5px; 
+            margin-bottom: 10px; 
+        }
         .ch-btn {
-            flex: 1; background: #111; border: 1px solid #444; color: #777;
-            padding: 12px 0; cursor: pointer; font-weight: bold; text-align: center; transition: 0.2s;
+            background: #111; border: 1px solid #444; color: #777;
+            padding: 8px 0; cursor: pointer; font-weight: bold; text-align: center; transition: 0.2s;
+            font-size: 0.9rem;
         }
         .ch-btn.active { border-color: var(--red); color: var(--red); background: rgba(255,0,0,0.2); }
         
         .play-btn {
-            width: 100%; padding: 15px; background: transparent; border: 1px solid var(--red);
+            width: 100%; padding: 12px; background: transparent; border: 1px solid var(--red);
             color: var(--red); font-weight: bold; text-transform: uppercase; cursor: pointer;
             transition: 0.2s; font-size: 1rem;
         }
@@ -242,7 +248,7 @@
         }
         .new-color-opt {
             width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
-            border: 2px solid transparent; opacity: 0.4; transition: 0.2s;
+            border: 1px solid transparent; opacity: 0.4; transition: 0.2s;
         }
         .new-color-opt.selected { opacity: 1; transform: scale(1.2); border-color: #fff; box-shadow: 0 0 8px currentColor; }
 
@@ -359,6 +365,7 @@
     <div id="app-ui">
         <div id="workspace">
             <div class="header">
+                <!-- Заголовок с эффектом погружения -->
                 <h2 id="main-header" 
                     onmousedown="startInvocation()" 
                     onmouseup="stopInvocation()" 
@@ -374,6 +381,15 @@
                     <div class="ch-btn active" onclick="setCh(0)">1</div>
                     <div class="ch-btn" onclick="setCh(1)">2</div>
                     <div class="ch-btn" onclick="setCh(2)">3</div>
+                    <div class="ch-btn" onclick="setCh(3)">4</div>
+                    <div class="ch-btn" onclick="setCh(4)">5</div>
+                </div>
+                <div class="channel-row">
+                    <div class="ch-btn" onclick="setCh(5)">6</div>
+                    <div class="ch-btn" onclick="setCh(6)">7</div>
+                    <div class="ch-btn" onclick="setCh(7)">8</div>
+                    <div class="ch-btn" onclick="setCh(8)">9</div>
+                    <div class="ch-btn" onclick="setCh(9)">10</div>
                 </div>
                 <button class="play-btn" id="play-btn" onclick="toggleAudio()">НАЧАТЬ ЭФИР</button>
             </div>
@@ -538,7 +554,6 @@
         function loadTasks() {
             let data = [];
             try {
-                // Загружаем шрифт
                 const savedFontSize = localStorage.getItem('stas_font_size');
                 if (savedFontSize) {
                     currentFontSize = parseFloat(savedFontSize);
@@ -573,9 +588,16 @@
         let tasks = loadTasks();
 
         const songs = [
-            "https://www.myinstants.com/media/sounds/st-int.mp3",
-            "https://www.myinstants.com/media/sounds/stranger-things-maxs-music.mp3",
-            "https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3"
+            "https://rus.hitmotop.com/get/music/20180126/LOrchestra_Cinematique_Michael_Stein_Kyle_Dixon_-_Stranger_Things_Main_Theme_53151697.mp3",
+            "https://rus.hitmotop.com/get/music/20171103/Michael_Stein_Kyle_Dixon_-_Kids_50273473.mp3",
+            "https://rus.hitmotop.com/get/music/20170902/Kate_Bush_-_Running_Up_That_Hill_A_Deal_With_God_48002274.mp3",
+            "https://rus.hitmotop.com/get/music/20170903/Journey_-_Separate_Ways_Worlds_Apart_48054280.mp3",
+            "https://rus.hitmotop.com/get/music/20170902/Scorpions_-_Rock_You_Like_a_Hurricane_47954772.mp3",
+            "https://rus.hitmotop.com/get/music/20170830/Bon_Jovi_-_Runaway_47852333.mp3",
+            "https://rus.hitmotop.com/get/music/20170902/The_Clash_-_Should_I_Stay_or_Should_I_Go_47992439.mp3",
+            "https://rus.hitmotop.com/get/music/20170830/The_Police_-_Every_Breath_You_Take_47835969.mp3",
+            "https://rus.hitmotop.com/get/music/20170902/Foreigner_-_Cold_As_Ice_47969496.mp3",
+            "https://rus.hitmotop.com/get/music/20170903/Cutting_Crew_-_Died_In_Your_Arms_48076414.mp3"
         ];
         let curCh = 0;
         
@@ -732,6 +754,7 @@
 
         function startTimer() {
             if (timerInterval) return;
+            // Устанавливаем целевое время (для работы в фоне)
             timerEndTime = Date.now() + timeLeft * 1000;
             
             timerInterval = setInterval(() => {
