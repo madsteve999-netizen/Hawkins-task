@@ -419,6 +419,18 @@
 
         .alarm-msg { font-size: 1.3rem; text-align: center; margin-bottom: 25px; font-weight: bold; color: #fff; line-height: 1.4; }
 
+        /* TOAST NOTIFICATION */
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(20, 0, 0, 0.9); color: #fff; padding: 12px 24px;
+            border: 1px solid var(--red); z-index: 2000;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+            font-weight: bold; text-transform: uppercase; font-size: 0.9rem;
+            box-shadow: 0 0 10px var(--dark-red);
+            text-align: center;
+        }
+        .toast.show { opacity: 1; }
+
     </style>
 </head>
 <body>
@@ -636,6 +648,29 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА УДАЛЕНИЯ -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">УДАЛИТЬ ЗАДАЧУ?</div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeDeleteModal()">НЕТ</button>
+                <button class="modal-btn primary" onclick="confirmDelete()">ДА, УНИЧТОЖИТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА НЕСОХРАНЕННЫХ ИЗМЕНЕНИЙ -->
+    <div id="unsaved-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title" style="font-size: 1.2rem;">ЕСТЬ НЕСОХРАНЕННЫЕ ИЗМЕНЕНИЯ</div>
+            <div style="color: #ccc; text-align: center; margin-bottom: 20px;">ТОЧНО ВЫЙТИ?</div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeUnsavedModal()">НЕТ, ОСТАТЬСЯ</button>
+                <button class="modal-btn primary" onclick="confirmCloseNotes()">ДА, ВЫЙТИ</button>
+            </div>
+        </div>
+    </div>
+
     <!-- МОДАЛКА ГОНГА -->
     <div id="alarm-modal" class="modal-overlay">
         <div class="modal-box">
@@ -766,7 +801,7 @@
                     });
                 } catch (err) {
                     console.error(err);
-                    alert("Браузер не дал доступ к экрану");
+                    showToast("БРАУЗЕР БЛОКИРУЕТ ЭКРАН");
                 }
             } else {
                 wakeLock.release();
@@ -778,6 +813,20 @@
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
             }
         });
+
+        // TOAST FUNCTION
+        function showToast(msg) {
+            let t = document.getElementById('toast-box');
+            if(!t) {
+                t = document.createElement('div');
+                t.id = 'toast-box';
+                t.className = 'toast';
+                document.body.appendChild(t);
+            }
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
 
         function initSelects() {
             const createOptions = (target, min, max, def) => {
@@ -826,7 +875,7 @@
         }
 
         function restoreTimerState() {
-            if (!timerHistory) { alert("Нет данных!"); return; }
+            if (!timerHistory) { showToast("НЕТ ДАННЫХ ОТМЕНЫ"); return; }
             if (confirm("ВЕРНУТЬСЯ НА ШАГ НАЗАД?")) {
                 stopTicking();
                 timeLeft = timerHistory.timeLeft;
@@ -1325,7 +1374,7 @@
                     })
                     .catch(error => {
                         console.error(error);
-                        alert("ОШИБКА АУДИО: Не удалось запустить поток. Проверьте интернет или выберите другую станцию.");
+                        showToast("ОШИБКА АУДИО ПОТОКА");
                         btn.innerText = "НАЧАТЬ ЭФИР";
                         btn.classList.remove('playing');
                         document.body.classList.remove('music-active'); 
@@ -1386,12 +1435,20 @@
             const currentContent = editor.innerHTML;
             
             if (currentContent !== originalNotesContent) {
-                if (confirm("В заметках есть несохраненные изменения. Точно закрыть?")) {
-                    closeNotesForce();
-                }
+                // Вместо native confirm используем кастомную модалку
+                document.getElementById('unsaved-modal').classList.add('open');
             } else {
                 closeNotesForce();
             }
+        }
+
+        function closeUnsavedModal() {
+            document.getElementById('unsaved-modal').classList.remove('open');
+        }
+
+        function confirmCloseNotes() {
+            closeUnsavedModal();
+            closeNotesForce();
         }
 
         function closeNotesForce() {
