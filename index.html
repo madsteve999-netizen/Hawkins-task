@@ -1489,7 +1489,7 @@
             // 1. Обновление заголовка вкладки
             document.title = `${timeStr} - ОЧЕНЬ СТРАННЫЕ ДЕЛА`;
 
-            // 2. Обновление Media Session (Для шторки/экрана блокировки) - если аудио активно
+            // 2. Обновление Media Session (Для шторки/экрана блокировки)
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: timeStr,
@@ -1497,6 +1497,7 @@
                     album: "HAWKINS LAB",
                     artwork: [{ src: 'https://cdn-icons-png.flaticon.com/512/3565/3565099.png', sizes: '512x512', type: 'image/png' }]
                 });
+                navigator.mediaSession.playbackState = 'playing';
             }
         }
 
@@ -1516,6 +1517,14 @@
 
                 if (diff >= 0) {
                     timeLeft = diff;
+
+                    // Force background audio if needed
+                    const mainAudio = document.getElementById('audio');
+                    const silence = document.getElementById('silence-loop');
+                    if (mainAudio.paused && silence.paused) {
+                        silence.play().catch(() => { });
+                    }
+
                     if (isWorkSession && timeLeft === 25 && vecnaEnabled) {
                         const vecna = document.getElementById('vecna-sfx');
                         vecna.currentTime = 0;
@@ -1804,6 +1813,14 @@
             const au = document.getElementById('audio');
             au.src = songs[curCh];
             au.volume = 0.5;
+
+            // Setup Media Session Actions (Required for iOS Control Center to stay active)
+            if ('mediaSession' in navigator) {
+                const actions = [['play', toggleTimer], ['pause', toggleTimer], ['stop', stopTimer], ['previoustrack', fullReset], ['nexttrack', forceNextStep]];
+                for (const [action, handler] of actions) {
+                    try { navigator.mediaSession.setActionHandler(action, handler); } catch (error) { }
+                }
+            }
 
             // ИНИЦИАЛИЗАЦИЯ ENTER для заметок
             document.getElementById('notes-editor').addEventListener('keydown', function (e) {
