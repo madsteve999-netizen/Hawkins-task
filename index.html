@@ -312,15 +312,24 @@
         }
 
         .notes-toolbar {
-            display: flex; gap: 5px; padding: 10px; border-bottom: 1px solid var(--dark-red);
-            background: rgba(20, 0, 0, 0.9); flex-wrap: wrap; justify-content: center;
+            display: flex; flex-direction: column; gap: 5px; padding: 10px; border-bottom: 1px solid var(--dark-red);
+            background: rgba(20, 0, 0, 0.9); align-items: center;
+        }
+
+        .toolbar-row {
+            display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; width: 100%;
         }
 
         .toolbar-btn {
             background: #111; border: 1px solid #444; color: #ccc;
             padding: 5px 10px; font-weight: bold; cursor: pointer; min-width: 30px;
+            display: flex; align-items: center; justify-content: center;
         }
         .toolbar-btn:active { background: var(--red); color: #000; }
+        
+        .toolbar-btn svg {
+            width: 16px; height: 16px; fill: currentColor;
+        }
         
         .toolbar-select {
             background: #000; border: 1px solid #444; color: #fff; padding: 5px; outline: none;
@@ -569,31 +578,46 @@
             <button class="notes-close-x" onclick="checkNotesClose()">X</button>
             <div class="notes-container">
                 <div class="notes-toolbar">
-                    <button class="toolbar-btn" onclick="formatDoc('bold')" title="Жирный"><b>B</b></button>
-                    <button class="toolbar-btn" onclick="formatDoc('italic')" title="Курсив"><i>I</i></button>
-                    <button class="toolbar-btn" onclick="formatDoc('underline')" title="Подчеркнуть"><u>U</u></button>
-                    
-                    <!-- Кнопка Чеклист -->
-                    <button class="toolbar-btn" onclick="insertChecklist()" title="Чеклист">☑</button>
+                    <div class="toolbar-row">
+                        <button class="toolbar-btn" onclick="formatDoc('bold')" title="Жирный"><b>B</b></button>
+                        <button class="toolbar-btn" onclick="formatDoc('italic')" title="Курсив"><i>I</i></button>
+                        <button class="toolbar-btn" onclick="formatDoc('underline')" title="Подчеркнуть"><u>U</u></button>
+                        
+                        <!-- Кнопка Чеклист -->
+                        <button class="toolbar-btn" onclick="insertChecklist()" title="Чеклист">☑</button>
 
-                    <select class="toolbar-select" onchange="formatDoc('fontName', this.value)">
-                        <option value="Courier New">Courier</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Times New Roman">Times</option>
-                    </select>
+                        <!-- Кнопки выравнивания -->
+                        <button class="toolbar-btn" onclick="formatDoc('justifyLeft')" title="Слева">
+                            <svg viewBox="0 0 24 24"><path d="M15 15H3v2h12v-2zm0-8H3v2h12V7zM3 13h18v-2H3v2zm0 8h18v-2H3v2zM3 3v2h18V3H3z"/></svg>
+                        </button>
+                        <button class="toolbar-btn" onclick="formatDoc('justifyCenter')" title="По центру">
+                            <svg viewBox="0 0 24 24"><path d="M7 15v2h10v-2H7zm-4 6h18v-2H3v2zm0-8h18v-2H3v2zm4-6v2h10V7H7zM3 3v2h18V3H3z"/></svg>
+                        </button>
+                        <button class="toolbar-btn" onclick="formatDoc('justifyRight')" title="Справа">
+                            <svg viewBox="0 0 24 24"><path d="M3 21h18v-2H3v2zm6-4h12v-2H9v2zm-6-4h18v-2H3v2zm6-4h12V7H9v2zM3 3v2h18V3H3z"/></svg>
+                        </button>
+                    </div>
 
-                    <select class="toolbar-select" onchange="formatDoc('fontSize', this.value)">
-                        <option value="3">Норм</option>
-                        <option value="5">Крупно</option>
-                        <option value="7">Огромно</option>
-                    </select>
-                    
-                    <select class="toolbar-select" onchange="formatDoc('foreColor', this.value)">
-                        <option value="white">Белый</option>
-                        <option value="red">Красный</option>
-                        <option value="yellow">Желтый</option>
-                        <option value="#888">Серый</option>
-                    </select>
+                    <div class="toolbar-row">
+                        <select class="toolbar-select" onchange="formatDoc('fontName', this.value)">
+                            <option value="Courier New">Courier</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times</option>
+                        </select>
+
+                        <select class="toolbar-select" onchange="formatDoc('fontSize', this.value)">
+                            <option value="3">Норм</option>
+                            <option value="5">Крупно</option>
+                            <option value="7">Огромно</option>
+                        </select>
+                        
+                        <select class="toolbar-select" onchange="formatDoc('foreColor', this.value)">
+                            <option value="white">Белый</option>
+                            <option value="red">Красный</option>
+                            <option value="yellow">Желтый</option>
+                            <option value="#888">Серый</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <!-- Редактор -->
