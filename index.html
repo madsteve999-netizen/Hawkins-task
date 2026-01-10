@@ -2892,7 +2892,8 @@
                         order_index: newRecord.order_index || 0
                     };
 
-                    if (!tasks.find(t => t.id === newTask.id)) {
+                    // FIXED: Use String() comparison for consistency with UPDATE/DELETE
+                    if (!tasks.find(t => String(t.id) === String(newTask.id))) {
                         tasks.push(newTask);
                         tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
                         save();
