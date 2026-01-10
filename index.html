@@ -1895,7 +1895,7 @@
         }
 
         function openEditModal(id) {
-            const t = tasks.find(x => x.id === id);
+            const t = tasks.find(x => String(x.id) === String(id));
             if (!t) return;
             currentEditId = id;
             document.getElementById('edit-task-input').value = t.txt;
@@ -1933,7 +1933,7 @@
         }
 
         function del(id) {
-            const t = tasks.find(x => x.id === id);
+            const t = tasks.find(x => String(x.id) === String(id));
             if (!t) return;
 
             if (!t.done) {
@@ -1958,15 +1958,17 @@
             taskToDeleteId = null;
         }
 
-        function executeDelete(id) {
-            tasks = tasks.filter(x => x.id !== id);
+        async function executeDelete(id) {
+            // Local delete
+            tasks = tasks.filter(x => String(x.id) !== String(id));
             playSfx('del');
             save();
             render();
 
             // Sync to cloud if logged in
             if (currentUser) {
-                deleteTaskFromCloud(id);
+                console.log('Syncing delete to cloud for task:', id);
+                await deleteTaskFromCloud(id);
             }
         }
 
@@ -2159,7 +2161,7 @@
         }
 
         function toggle(id) {
-            const t = tasks.find(x => x.id === id);
+            const t = tasks.find(x => String(x.id) === String(id));
             if (t) {
                 t.done = !t.done;
                 playSfx('click');
@@ -2188,11 +2190,12 @@
                 li.className = `task-item ${t.done ? 'completed' : ''} ${colorClass}`;
                 li.dataset.id = t.id;
 
+                const taskIdStr = String(t.id);
                 li.innerHTML = `
-                    <div class="checkbox" onclick="toggle(${t.id})"></div>
-                    <span class="task-text" onclick="toggle(${t.id})">${t.txt}</span>
-                    <button class="btn-action btn-edit" onclick="openEditModal(${t.id})">✎</button>
-                    <button class="btn-action btn-del" onclick="del(${t.id})">×</button>
+                    <div class="checkbox" onclick="toggle('${taskIdStr}')"></div>
+                    <span class="task-text" onclick="toggle('${taskIdStr}')">${t.txt}</span>
+                    <button class="btn-action btn-edit" onclick="openEditModal('${taskIdStr}')">✎</button>
+                    <button class="btn-action btn-del" onclick="del('${taskIdStr}')">×</button>
                 `;
                 if (t.done) com.appendChild(li); else act.appendChild(li);
             });
