@@ -1535,6 +1535,7 @@
         let supabaseClient = null;
         let currentUser = null;
         let realtimeChannel = null;
+        let notesRealtimeChannel = null;
         let pendingEmail = '';
 
         // Initialize Supabase after page loads
@@ -2584,6 +2585,7 @@
 
             // Subscribe to realtime updates
             subscribeToTasks();
+            subscribeToNotes();
 
             updateAuthUI();
         }
@@ -2883,6 +2885,61 @@
                 .subscribe((status) => {
                     console.log('Realtime subscription status:', status);
                 });
+        }
+
+        function subscribeToNotes() {
+            if (!currentUser || notesRealtimeChannel || !supabaseClient) {
+                console.log('subscribeToNotes skipped:', { currentUser: !!currentUser, notesRealtimeChannel: !!notesRealtimeChannel, supabaseClient: !!supabaseClient });
+                return;
+            }
+
+            console.log('Creating Realtime subscription for notes, user:', currentUser.id);
+            notesRealtimeChannel = supabaseClient
+                .channel('notes-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'notes',
+                        filter: `user_id=eq.${currentUser.id}`
+                    },
+                    (payload) => {
+                        console.log('Notes Realtime event received:', payload);
+                        handleNotesRealtimeEvent(payload);
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('Notes Realtime subscription status:', status);
+                });
+        }
+
+        function handleNotesRealtimeEvent(payload) {
+            console.log('handleNotesRealtimeEvent called with:', payload);
+            const { eventType, new: newRecord } = payload;
+            console.log('Notes event type:', eventType, 'New:', newRecord);
+
+            if (eventType === 'INSERT' || eventType === 'UPDATE') {
+                // Update local notes from cloud
+                if (newRecord && newRecord.content !== undefined) {
+                    console.log('Updating notes from cloud');
+                    const NOTES_KEY = 'stas_notes';
+                    const currentContent = localStorage.getItem(NOTES_KEY) || '';
+
+                    // Only update if content is different to avoid loops
+                    if (currentContent !== newRecord.content) {
+                        localStorage.setItem(NOTES_KEY, newRecord.content);
+
+                        // Update editor if notes modal is open
+                        const editor = document.getElementById('notes-editor');
+                        if (editor && document.getElementById('notes-modal').classList.contains('open')) {
+                            editor.innerHTML = newRecord.content;
+                        }
+
+                        showToast('ЗАМЕТКИ ОБНОВЛЕНЫ ИЗ ОБЛАКА');
+                    }
+                }
+            }
         }
 
         function handleRealtimeEvent(payload) {
