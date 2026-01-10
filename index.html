@@ -450,11 +450,41 @@
         .status-badge {
             font-size: 0.75rem;
             color: #555;
-            text-align: center;
-            margin-top: 10px;
             letter-spacing: 1px;
             text-transform: uppercase;
             font-weight: bold;
+        }
+
+        .status-stripe {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 0 5px;
+            width: 100%;
+        }
+
+        .air-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #555;
+        }
+
+        .air-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--red);
+            box-shadow: 0 0 5px var(--red);
+        }
+
+        .air-dot.on {
+            background-color: var(--color-green);
+            box-shadow: 0 0 5px var(--color-green);
         }
 
         /* Ввод задач */
@@ -1204,8 +1234,14 @@
                     </div>
                 </div>
 
-                <!-- Статус цикла ВСЕГДА ВИДЕН -->
-                <div class="status-badge" id="cycle-status">ЦИКЛ 1 / 4</div>
+                <!-- Статус цикла ВСЕГДА ВИДЕН + ON/OFF AIR -->
+                <div class="status-stripe">
+                    <div class="status-badge" id="cycle-status">ЦИКЛ 1 / 4</div>
+                    <div class="air-status">
+                        <span class="air-dot" id="main-air-dot"></span>
+                        <span id="main-air-text">OFF AIR</span>
+                    </div>
+                </div>
             </div>
 
             <div class="input-wrapper">
@@ -2421,14 +2457,29 @@
                 statusEl.innerHTML = '<span class="status-online">🟢 В ЭФИРЕ (ON AIR)</span>';
                 userEmail.innerText = currentUser.email;
                 loggedIn.style.display = 'block';
+
+                // Update Main Screen Indicator
+                document.getElementById('main-air-dot').classList.add('on');
+                document.getElementById('main-air-text').innerText = 'ON AIR';
+                document.getElementById('main-air-text').style.color = 'var(--color-green)';
             } else if (state === 'awaiting-code') {
                 // Awaiting code state
                 statusEl.innerHTML = '<span class="status-offline">🔴 ОЖИДАНИЕ ШИФРОВКИ</span>';
                 codeForm.style.display = 'block';
+
+                // Update Main Screen Indicator (Keep as Off/Waiting)
+                document.getElementById('main-air-dot').classList.remove('on');
+                document.getElementById('main-air-text').innerText = 'OFF AIR';
+                document.getElementById('main-air-text').style.color = '#555';
             } else {
                 // Logged out state - SHOW LOGIN FORM
                 statusEl.innerHTML = '<span class="status-offline">🔴 ВНЕ ЭФИРА (OFF AIR)</span>';
                 loginForm.style.display = 'block';
+
+                // Update Main Screen Indicator
+                document.getElementById('main-air-dot').classList.remove('on');
+                document.getElementById('main-air-text').innerText = 'OFF AIR';
+                document.getElementById('main-air-text').style.color = '#555';
             }
         }
 
@@ -2573,13 +2624,23 @@
                     order_index: t.order_index
                 }));
 
-                const { error } = await supabaseClient
+                // ADDED TIMEOUT: If network is slow, don't hang forever
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT')), 5000)
+                );
+
+                const updatePromise = supabaseClient
                     .from('tasks')
                     .upsert(updates);
+
+                const { error } = await Promise.race([updatePromise, timeoutPromise]);
 
                 if (error) throw error;
             } catch (error) {
                 console.error('Update Order Error:', error);
+                if (error.message === 'TIMEOUT') {
+                    showToast('СЕТЬ ТОРМОЗИТ: ПОРЯДОК НЕ СОХРАНЕН');
+                }
             } finally {
                 hideSyncIndicator();
             }
@@ -2589,15 +2650,25 @@
             if (!currentUser || !supabaseClient) return;
 
             try {
-                const { error } = await supabaseClient
+                // ADDED TIMEOUT
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT')), 5000)
+                );
+
+                const updatePromise = supabaseClient
                     .from('tasks')
                     .update(updates)
                     .eq('id', taskId)
                     .eq('user_id', currentUser.id);
 
+                const { error } = await Promise.race([updatePromise, timeoutPromise]);
+
                 if (error) throw error;
             } catch (error) {
                 console.error('Update Task Error:', error);
+                if (error.message === 'TIMEOUT') {
+                    showToast('СЛАБАЯ СЕТЬ: ОБНОВЛЕНИЕ НЕ ОТПРАВЛЕНО');
+                }
             }
         }
 
