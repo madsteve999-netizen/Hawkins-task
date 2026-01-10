@@ -2600,15 +2600,20 @@
 
             try {
                 // Soft Delete: Update is_deleted = true
-                const { error, count } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('tasks')
                     .update({ is_deleted: true })
                     .eq('id', taskId)
                     .eq('user_id', currentUser.id)
-                    .select('count'); // Just to check connection
+                    .select();
 
                 if (error) throw error;
-                console.log('Soft deleted task in cloud:', taskId);
+
+                if (data && data.length > 0) {
+                    console.log('Soft deleted task in cloud:', taskId);
+                } else {
+                    console.warn('Task not found or not owned by user for soft delete:', taskId);
+                }
             } catch (error) {
                 console.error('Delete Task Error:', error);
                 showToast('ОШИБКА УДАЛЕНИЯ: ' + error.message);
