@@ -2293,6 +2293,13 @@
             try { localStorage.setItem(DB_KEY, JSON.stringify(tasks)); } catch (e) { }
         }
 
+        // ========== SECURITY: XSS PROTECTION ==========
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         function render() {
             const act = document.getElementById('active-list');
             const com = document.getElementById('completed-list');
@@ -2310,7 +2317,7 @@
                 const taskIdStr = String(t.id);
                 li.innerHTML = `
                     <div class="checkbox" onclick="toggle('${taskIdStr}')"></div>
-                    <span class="task-text" onclick="toggle('${taskIdStr}')">${t.txt}</span>
+                    <span class="task-text" onclick="toggle('${taskIdStr}')">${escapeHtml(t.txt)}</span>
                     <button class="btn-action btn-edit" onclick="openEditModal('${taskIdStr}')">✎</button>
                     <button class="btn-action btn-del" onclick="del('${taskIdStr}')">×</button>
                 `;
