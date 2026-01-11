@@ -297,6 +297,54 @@
             color: #000;
         }
 
+        /* Radio Collapsible Panel */
+        .radio-header {
+            cursor: pointer;
+            padding: 10px;
+            margin: -15px -15px 15px -15px;
+            border-bottom: 2px solid var(--dark-red);
+            color: var(--red);
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .radio-header:hover {
+            border-bottom-color: var(--red);
+            text-shadow: 0 0 8px var(--red);
+        }
+
+        .radio-header svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            transition: transform 0.3s ease;
+        }
+
+        .radio-header.collapsed svg {
+            transform: rotate(-90deg);
+        }
+
+        .radio-content {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .radio-content.hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+
         /* --- ТАЙМЕР --- */
         .timer-display-row {
             display: flex;
@@ -354,7 +402,7 @@
 
         .timer-icons-row {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             gap: 8px;
             margin-bottom: 15px;
             width: 100%;
@@ -1233,21 +1281,29 @@
 
             <!-- БЛОК РАДИО -->
             <div class="control-box" id="radio-control-box">
-                <div class="channel-row">
-                    <div class="ch-btn active" onclick="setCh(0)">1</div>
-                    <div class="ch-btn" onclick="setCh(1)">2</div>
-                    <div class="ch-btn" onclick="setCh(2)">3</div>
-                    <div class="ch-btn" onclick="setCh(3)">4</div>
-                    <div class="ch-btn" onclick="setCh(4)">5</div>
+                <div class="radio-header collapsed" onclick="toggleRadioPanel()">
+                    📡 ЧАСТОТЫ ЭФИРА
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
                 </div>
-                <div class="channel-row">
-                    <div class="ch-btn" onclick="setCh(5)">6</div>
-                    <div class="ch-btn" onclick="setCh(6)">7</div>
-                    <div class="ch-btn" onclick="setCh(7)">8</div>
-                    <div class="ch-btn" onclick="setCh(8)">9</div>
-                    <div class="ch-btn" onclick="setCh(9)">10</div>
+                <div class="radio-content hidden">
+                    <div class="channel-row">
+                        <div class="ch-btn active" onclick="setCh(0)">1</div>
+                        <div class="ch-btn" onclick="setCh(1)">2</div>
+                        <div class="ch-btn" onclick="setCh(2)">3</div>
+                        <div class="ch-btn" onclick="setCh(3)">4</div>
+                        <div class="ch-btn" onclick="setCh(4)">5</div>
+                    </div>
+                    <div class="channel-row">
+                        <div class="ch-btn" onclick="setCh(5)">6</div>
+                        <div class="ch-btn" onclick="setCh(6)">7</div>
+                        <div class="ch-btn" onclick="setCh(7)">8</div>
+                        <div class="ch-btn" onclick="setCh(8)">9</div>
+                        <div class="ch-btn" onclick="setCh(9)">10</div>
+                    </div>
+                    <button class="play-btn" id="play-btn" onclick="toggleAudio()">НАЧАТЬ ЭФИР</button>
                 </div>
-                <button class="play-btn" id="play-btn" onclick="toggleAudio()">НАЧАТЬ ЭФИР</button>
             </div>
 
             <!-- БЛОК ПОМОДОРО -->
@@ -1285,6 +1341,14 @@
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none"
                                 stroke-width="2" />
                             <line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </button>
+
+                    <!-- Сжечь Архив -->
+                    <button class="t-btn-icon" title="СЖЕЧЬ АРХИВ" onclick="openBurnModal()">
+                        <svg viewBox="0 0 24 24" style="fill: currentColor; stroke: none;">
+                            <path
+                                d="M12 23c-3.037 0-5.5-2.463-5.5-5.5 0-2.702 1.796-4.577 2.77-5.478.294-.272.53-.48.73-.663V8.5c0-.276.224-.5.5-.5s.5.224.5.5v2.859c.2.183.436.391.73.663.974.901 2.77 2.776 2.77 5.478 0 3.037-2.463 5.5-5.5 5.5zm0-1c2.485 0 4.5-2.015 4.5-4.5 0-2.235-1.521-3.843-2.395-4.661-.318-.297-.602-.562-.855-.805-.253.243-.537.508-.855.805C11.521 13.657 10 15.265 10 17.5c0 2.485 2.015 4.5 4.5 4.5zM9 11.5c0 .276-.224.5-.5.5s-.5-.224-.5-.5c0-1.93-1.57-3.5-3.5-3.5-.276 0-.5-.224-.5-.5s.224-.5.5-.5c2.481 0 4.5 2.019 4.5 4.5zm11-4c0 .276-.224.5-.5.5s-.5-.224-.5-.5c0-1.93-1.57-3.5-3.5-3.5-.276 0-.5-.224-.5-.5s.224-.5.5-.5c2.481 0 4.5 2.019 4.5 4.5zM7 6.5c0 .276-.224.5-.5.5s-.5-.224-.5-.5C6 4.019 7.519 2.5 10 2.5c.276 0 .5.224.5.5s-.224.5-.5.5C8.07 3.5 7 4.57 7 6.5z" />
                         </svg>
                     </button>
 
@@ -1556,6 +1620,20 @@
             <div class="modal-actions">
                 <button class="modal-btn" onclick="closeUnsavedModal()">НЕТ, ОСТАТЬСЯ</button>
                 <button class="modal-btn primary" onclick="confirmCloseNotes()">ДА, ВЫЙТИ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА СЖИГАНИЯ АРХИВА -->
+    <div id="burn-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title" style="font-size: 1.2rem;">ПРОТОКОЛ: СЖИГАНИЕ</div>
+            <div style="color: #ccc; text-align: center; margin-bottom: 20px; line-height: 1.5;">
+                ВЫ ТОЧНО ХОТИТЕ УНИЧТОЖИТЬ ВСЕ ВЫПОЛНЕННЫЕ ЗАДАЧИ?<br>ЭТО НЕОБРАТИМО.
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeBurnModal()">ОТМЕНА</button>
+                <button class="modal-btn primary" onclick="confirmBurnArchive()">СЖЕЧЬ</button>
             </div>
         </div>
     </div>
@@ -2137,6 +2215,67 @@
             if (currentUser) {
                 console.log('Syncing delete to cloud for task:', id);
                 await deleteTaskFromCloud(id);
+            }
+        }
+
+        // === RADIO PANEL TOGGLE ===
+        function toggleRadioPanel() {
+            const header = document.querySelector('.radio-header');
+            const content = document.querySelector('.radio-content');
+
+            header.classList.toggle('collapsed');
+            content.classList.toggle('hidden');
+        }
+
+        // === BURN ARCHIVE MODAL ===
+        function openBurnModal() {
+            // Check if there are any completed tasks
+            const completedTasks = tasks.filter(t => t.done);
+            if (completedTasks.length === 0) {
+                // No completed tasks to burn
+                return;
+            }
+            document.getElementById('burn-modal').classList.add('open');
+        }
+
+        function closeBurnModal() {
+            document.getElementById('burn-modal').classList.remove('open');
+        }
+
+        async function confirmBurnArchive() {
+            closeBurnModal();
+            await burnArchive();
+        }
+
+        async function burnArchive() {
+            // Get all completed tasks before filtering
+            const completedTasks = tasks.filter(t => t.done);
+
+            if (completedTasks.length === 0) {
+                return;
+            }
+
+            // Filter out completed tasks (keep only non-completed)
+            tasks = tasks.filter(t => !t.done);
+
+            // Play effects
+            playSfx('del');
+            triggerLightning();
+
+            // Save to localStorage
+            save();
+
+            // Re-render
+            render();
+
+            // Sync to cloud if logged in
+            if (currentUser && supabaseClient) {
+                console.log('Syncing burn archive to cloud:', completedTasks.length, 'tasks');
+
+                // Delete each completed task from cloud
+                for (const task of completedTasks) {
+                    await deleteTaskFromCloud(task.id);
+                }
             }
         }
 
