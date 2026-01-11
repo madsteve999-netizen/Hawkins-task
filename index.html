@@ -962,6 +962,7 @@
         .range-slider {
             width: 100%;
             -webkit-appearance: none;
+            appearance: none;
             background: #333;
             height: 6px;
             outline: none;
@@ -1258,6 +1259,30 @@
             font-size: 4.5rem;
             text-shadow: 0 0 25px var(--red), 0 0 50px var(--red);
             transition: all 0.5s ease;
+        }
+
+        /* --- ДОПОЛНЕНИЕ ДЛЯ VOID РЕЖИМА (ЦЕНТРОВКА) --- */
+
+        /* 1. Скрываем кнопки (карандаш и крестик) у активной задачи */
+        body.void-mode #active-list li:first-child .btn-action {
+            display: none !important;
+        }
+
+        /* 2. Центрируем саму плашку задачи */
+        body.void-mode #active-list li:first-child {
+            justify-content: center;
+            /* Собираем всё в центр */
+            padding-right: 15px;
+            /* Возвращаем баланс отступов (так как кнопок справа нет) */
+        }
+
+        /* 3. Убираем "растягивание" текста, чтобы он прижался к центру */
+        body.void-mode #active-list li:first-child .task-text {
+            flex: 0 0 auto;
+            /* Текст занимает ровно столько места, сколько букв */
+            text-align: center;
+            max-width: 85%;
+            /* Чтобы слишком длинный текст не ломал верстку */
         }
     </style>
 
