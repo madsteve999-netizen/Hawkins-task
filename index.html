@@ -2887,16 +2887,13 @@
             updateAuthUI();
         }
 
-        // ========== TASK SYNCHRONIZATION ==========
+        // ========== TASK SYNCHRONIZATION (CLOUD TRUTH) ==========
         async function syncTasksOnLogin() {
             if (!currentUser || !supabaseClient) return;
             showSyncIndicator();
 
             try {
-                // Get local tasks
-                const localTasks = tasks;
-
-                // Get cloud tasks
+                // 1. Get ALL cloud tasks (including deleted ones for comparison)
                 const { data: cloudTasks, error } = await supabaseClient
                     .from('tasks')
                     .select('*')
@@ -2905,86 +2902,88 @@
 
                 if (error) throw error;
 
-                if (!cloudTasks || cloudTasks.length === 0) {
-                    // Cloud is empty - BULK INSERT all local tasks (PERFORMANCE)
-                    if (tasks.length > 0) {
-                        tasks.forEach((t, i) => t.order_index = i);
+                // 2. Create Map of cloud tasks by title for fast lookup
+                const cloudTasksByTitle = new Map();
+                if (cloudTasks) {
+                    cloudTasks.forEach(ct => {
+                        cloudTasksByTitle.set(ct.title, ct);
+                    });
+                }
 
-                        const tasksToUpload = tasks.map(task => ({
-                            user_id: currentUser.id,
-                            title: task.txt,
-                            is_completed: task.done,
-                            color: task.color || 'red',
-                            order_index: task.order_index || 0
-                        }));
+                // 3. Process local tasks - upload ONLY if not in cloud by title
+                const localTasks = tasks;
+                const uploadedTasks = [];
 
-                        const { error: bulkError } = await supabaseClient
+                for (const localTask of localTasks) {
+                    const cloudMatch = cloudTasksByTitle.get(localTask.txt);
+
+                    if (!cloudMatch) {
+                        // Task doesn't exist in cloud by title - upload it
+                        console.log('Uploading new local task:', localTask.txt);
+
+                        const { data: newTask, error: uploadError } = await supabaseClient
                             .from('tasks')
-                            .insert(tasksToUpload);
+                            .insert({
+                                user_id: currentUser.id,
+                                title: localTask.txt,
+                                is_completed: localTask.done,
+                                color: localTask.color || 'red',
+                                order_index: localTask.order_index || 0,
+                                is_deleted: false
+                            })
+                            .select()
+                            .single();
 
-                        if (bulkError) throw bulkError;
-                        showToast('ЗАДАЧИ ЗАГРУЖЕНЫ В ОБЛАКО');
-                    }
-                } else {
-                    // Merge: Cloud priority + unique local
-                    // Filter out cloud tasks that are soft-deleted
-                    const activeCloudTasks = cloudTasks.filter(ct => !ct.is_deleted);
-
-                    // Convert cloud tasks to our format
-                    const convertedCloudTasks = activeCloudTasks.map(ct => ({
-                        id: ct.id,
-                        txt: ct.title,
-                        done: ct.is_completed,
-                        color: ct.color || 'red',
-                        order_index: ct.order_index || 0
-                    }));
-
-                    // Find unique local tasks not in cloud and UPLOAD them
-                    // Also check if local task exists in cloud but is marked deleted (ZOMBIE CHECK)
-                    for (const localTask of localTasks) {
-                        const cloudMatch = cloudTasks.find(ct =>
-                            ct.title === localTask.txt && ct.is_completed === localTask.done
-                        );
-
-                        if (!cloudMatch) {
-                            // Unique local task - Safe to upload
-                            const { data: newTask, error: uploadError } = await supabaseClient
-                                .from('tasks')
-                                .insert({
-                                    user_id: currentUser.id,
-                                    title: localTask.txt,
-                                    is_completed: localTask.done,
-                                    color: localTask.color || 'red',
-                                    order_index: localTask.order_index || convertedCloudTasks.length,
-                                    is_deleted: false
-                                })
-                                .select()
-                                .single();
-
-                            if (!uploadError && newTask) {
-                                convertedCloudTasks.push({
-                                    id: newTask.id,
-                                    txt: newTask.title,
-                                    done: newTask.is_completed,
-                                    color: newTask.color || 'red',
-                                    order_index: newTask.order_index || 0
-                                });
-                            }
+                        if (!uploadError && newTask) {
+                            uploadedTasks.push(newTask);
+                            console.log('Successfully uploaded:', newTask.title);
+                        } else if (uploadError) {
+                            console.error('Upload error for task:', localTask.txt, uploadError);
                         }
-                        // If cloudMatch exists and is_deleted is true, we simply ignore the local task 
-                        // (effectively deleting it from local state by not adding it to convertedCloudTasks)
+                    } else {
+                        // Task exists in cloud - ignore local version (cloud is truth)
+                        console.log('Task exists in cloud, ignoring local version:', localTask.txt);
                     }
+                }
 
-                    // Update local state with merged (and filtered) cloud tasks
-                    tasks = convertedCloudTasks;
+                // 4. Fetch fresh cloud data after uploads (to get any newly inserted tasks)
+                const { data: freshCloudTasks, error: refreshError } = await supabaseClient
+                    .from('tasks')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('order_index', { ascending: true });
 
-                    // Final sort just in case
-                    tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+                if (refreshError) throw refreshError;
 
-                    save();
-                    render();
+                // 5. Filter out soft-deleted tasks and convert to local format
+                const activeCloudTasks = (freshCloudTasks || []).filter(ct => !ct.is_deleted);
+
+                const convertedCloudTasks = activeCloudTasks.map(ct => ({
+                    id: ct.id,
+                    txt: ct.title,
+                    done: ct.is_completed,
+                    color: ct.color || 'red',
+                    order_index: ct.order_index || 0
+                }));
+
+                // 6. REPLACE local state with cloud data (Cloud Truth)
+                tasks = convertedCloudTasks;
+
+                // 7. Sort by order_index
+                tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+                // 8. Save and render
+                save();
+                render();
+
+                const uploadCount = uploadedTasks.length;
+                if (uploadCount > 0) {
+                    showToast(`СИНХРОНИЗАЦИЯ: ${uploadCount} ЗАДАЧ ЗАГРУЖЕНО`);
+                } else {
                     showToast('СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА');
                 }
+
+                console.log('Sync complete. Total tasks:', tasks.length);
             } catch (error) {
                 console.error('Sync Error:', error);
                 showToast('ОШИБКА СИНХРОНИЗАЦИИ');
