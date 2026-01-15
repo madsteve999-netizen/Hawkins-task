@@ -1,0 +1,1329 @@
+:root {
+    --red: #ff0000;
+    --dark-red: #590000;
+    --task-font-size: 1.1rem;
+    --task-font-family: 'Courier New', Courier, monospace;
+
+    /* Original colors */
+    --color-red: #ff0000;
+    --color-yellow: #ffeb3b;
+    --color-blue: #1e00ff;
+    --color-green: #00ff00;
+    --color-grey: #666666;
+
+    /* NEW: 5 additional colors */
+    --color-orange: #ff9100;
+    --color-purple: #d500f9;
+    --color-cyan: #00e5ff;
+    --color-lime: #76ff03;
+    --color-white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body,
+html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    /* LOCK WINDOW SCROLL */
+    position: fixed;
+    /* PREVENT RUBBER BANDING */
+    background-color: #000;
+    font-family: 'Courier New', Courier, monospace;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* --- ФОН --- */
+.bg-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    background-image: url('https://images.cgames.de/images/gamestar/290/stranger-things_6000665.jpg');
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.1) brightness(0.7);
+    transition: filter 0.2s;
+}
+
+body.invoking .bg-layer {
+    filter: contrast(1.5) brightness(0.2) sepia(0.5) hue-rotate(-10deg);
+    transition: filter 3s ease;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+.scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    opacity: 0.2;
+}
+
+/* --- ЭФФЕКТЫ --- */
+#spores-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 2s ease;
+    overflow: hidden;
+}
+
+body.music-active #spores-container {
+    opacity: 1;
+}
+
+body.invoking #spores-container {
+    opacity: 1 !important;
+    transition: opacity 0.5s ease;
+}
+
+.spore {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.9);
+}
+
+@keyframes fall {
+    0% {
+        top: -10%;
+        opacity: 0;
+    }
+
+    10%,
+    90% {
+        opacity: 0.9;
+    }
+
+    100% {
+        top: 110%;
+        opacity: 0;
+    }
+}
+
+@keyframes sway {
+    0% {
+        transform: translateX(0px);
+    }
+
+    100% {
+        transform: translateX(25px);
+    }
+}
+
+#lightning {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.15);
+    mix-blend-mode: hard-light;
+    opacity: 0;
+}
+
+.flash-now {
+    animation: thunder-strike 0.6s ease-out;
+}
+
+@keyframes thunder-strike {
+
+    0%,
+    100% {
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 0.8;
+    }
+
+    15% {
+        opacity: 0.6;
+    }
+}
+
+/* --- ИНТЕРФЕЙС --- */
+#app-ui {
+    position: relative;
+    z-index: 10;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    /* ENABLE CONTAINER SCROLL */
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* SMOOTH IOS SCROLL */
+}
+
+@keyframes flicker {
+
+    0%,
+    100% {
+        opacity: 1;
+        text-shadow: 0 0 20px var(--red);
+    }
+
+    50% {
+        opacity: 0.8;
+        text-shadow: 0 0 5px var(--dark-red);
+    }
+}
+
+#workspace {
+    display: block;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+    padding-bottom: 100px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--dark-red);
+}
+
+.header h2 {
+    color: var(--red);
+    margin: 0;
+    font-size: 2rem;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px #000;
+    animation: flicker 4s infinite alternate;
+    cursor: pointer;
+    transition: all 3s ease;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+body.invoking .header h2 {
+    color: #1a0000;
+    text-shadow: 0 0 5px #000;
+    transform: scale(0.98);
+}
+
+/* БЛОКИ */
+.control-box {
+    background: rgba(20, 0, 0, 0.85);
+    border: 1px solid var(--dark-red);
+    padding: 15px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Радио */
+.channel-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.ch-btn {
+    background: #111;
+    border: 1px solid #444;
+    color: #777;
+    padding: 8px 0;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+    transition: 0.2s;
+    font-size: 0.9rem;
+}
+
+.ch-btn.active {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255, 0, 0, 0.2);
+}
+
+.play-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 1rem;
+}
+
+.play-btn.playing {
+    background: var(--red);
+    color: #000;
+}
+
+/* Radio Collapsible Panel */
+.radio-header {
+    cursor: pointer;
+    padding: 10px;
+    margin: -15px -15px 15px -15px;
+    border-bottom: 2px solid var(--dark-red);
+    color: var(--red);
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.radio-header:hover {
+    border-bottom-color: var(--red);
+    text-shadow: 0 0 8px var(--red);
+}
+
+.radio-header svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    transition: transform 0.3s ease;
+}
+
+.radio-header.collapsed svg {
+    transform: rotate(-90deg);
+}
+
+.radio-content {
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.radio-content.hidden {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* --- ТАЙМЕР --- */
+.timer-display-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #444;
+}
+
+.timer-digits {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 15px var(--red);
+    letter-spacing: 2px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    text-align: center;
+    width: 100%;
+}
+
+.timer-controls-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.t-btn-text {
+    background: transparent;
+    border: 1px solid var(--dark-red);
+    color: #ccc;
+    font-weight: bold;
+    font-size: 0.9rem;
+    padding: 12px 0;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.2s;
+    width: 100%;
+}
+
+.t-btn-text:hover {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.t-btn-text.active {
+    background: var(--red);
+    color: #000;
+    border-color: var(--red);
+}
+
+/* MODE SWITCHER STYLES */
+.mode-switch {
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+    color: #fff;
+    user-select: none;
+}
+
+.mode-switch span {
+    cursor: pointer;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.mode-switch span.active {
+    opacity: 1;
+    text-shadow: 0 0 10px var(--red), 0 0 20px var(--red);
+}
+
+.mode-switch span:hover {
+    opacity: 0.7;
+}
+
+/* CHRONO MODE - CYAN THEME */
+body.chrono-mode .mode-switch span.active {
+    text-shadow: 0 0 10px #00e5ff, 0 0 20px #00e5ff;
+}
+
+body.chrono-mode .timer-digits {
+    text-shadow: 0 0 15px #00e5ff;
+}
+
+body.chrono-mode .t-btn-text:hover {
+    border-color: #00e5ff;
+    color: #00e5ff;
+}
+
+body.chrono-mode .t-btn-text.active {
+    background: #00e5ff;
+    color: #000;
+    border-color: #00e5ff;
+}
+
+body.chrono-mode .t-btn-icon:hover {
+    color: #00e5ff;
+}
+
+body.chrono-mode .t-btn-icon.active {
+    color: #00e5ff;
+    text-shadow: 0 0 10px #00e5ff;
+}
+
+body.chrono-mode .control-box {
+    border-color: #00e5ff;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+}
+
+.timer-icons-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.t-btn-icon {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 0;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    min-width: 0;
+}
+
+/* ЖЕСТКИЙ РАЗМЕР ДЛЯ ИКОНОК */
+.t-btn-icon svg {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    flex-shrink: 0;
+}
+
+@media (hover: hover) {
+    .t-btn-icon:hover {
+        border-color: var(--red);
+        color: var(--red);
+    }
+}
+
+.t-btn-icon.active {
+    border-color: var(--red) !important;
+    color: var(--red) !important;
+    background: rgba(255, 0, 0, 0.1);
+    box-shadow: 0 0 5px var(--dark-red);
+}
+
+.t-btn-icon.active svg {
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 2px var(--red));
+}
+
+.timer-row-settings {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    border-top: 1px dashed #333;
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+.timer-row-settings.visible {
+    display: grid;
+}
+
+.setting-cell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    padding: 8px 10px;
+}
+
+.setting-cell label {
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.setting-cell select {
+    width: 50px;
+    background: transparent;
+    border: none;
+    color: var(--red);
+    font-weight: bold;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    text-align: right;
+    text-align-last: right;
+    cursor: pointer;
+}
+
+.setting-cell select::-ms-expand {
+    display: none;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    color: #555;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.status-stripe {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding: 0 5px;
+    width: 100%;
+}
+
+.air-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: #555;
+}
+
+.air-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--red);
+    box-shadow: 0 0 5px var(--red);
+}
+
+.air-dot.on {
+    background-color: var(--color-green);
+    box-shadow: 0 0 5px var(--color-green);
+}
+
+/* Ввод задач */
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.input-row {
+    display: flex;
+    position: relative;
+    gap: 5px;
+    margin-bottom: 30px;
+}
+
+#task-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    border-bottom: 2px solid var(--dark-red);
+    color: #fff;
+    font-size: 1.2rem;
+    padding: 15px;
+    padding-right: 60px;
+    outline: none;
+}
+
+.add-btn {
+    width: 60px;
+    background: transparent;
+    border: 1px solid var(--dark-red);
+    color: var(--red);
+    font-size: 2.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+}
+
+.add-btn:active {
+    background: var(--red);
+    color: #000;
+}
+
+.new-task-colors {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    padding-right: 5px;
+    margin-top: -20px;
+    margin-bottom: 20px;
+}
+
+.new-color-opt {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid transparent;
+    opacity: 0.4;
+    transition: 0.2s;
+}
+
+.new-color-opt.selected {
+    opacity: 1;
+    transform: scale(1.2);
+    border-color: #fff;
+    box-shadow: 0 0 8px currentColor;
+}
+
+/* Списки */
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.task-item {
+    background: rgba(20, 20, 20, 0.85);
+    border-left: 4px solid var(--red);
+    margin-bottom: 12px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    touch-action: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.task-item.border-red {
+    border-left-color: var(--color-red);
+}
+
+.task-item.border-yellow {
+    border-left-color: var(--color-yellow);
+}
+
+.task-item.border-blue {
+    border-left-color: var(--color-blue);
+}
+
+.task-item.border-green {
+    border-left-color: var(--color-green);
+}
+
+.task-item.border-grey {
+    border-left-color: var(--color-grey);
+}
+
+/* NEW: Border classes for 5 new colors */
+.task-item.border-orange {
+    border-left-color: var(--color-orange);
+}
+
+.task-item.border-purple {
+    border-left-color: var(--color-purple);
+}
+
+.task-item.border-cyan {
+    border-left-color: var(--color-cyan);
+}
+
+.task-item.border-lime {
+    border-left-color: var(--color-lime);
+}
+
+.task-item.border-white {
+    border-left-color: var(--color-white);
+}
+
+.task-text {
+    flex: 1;
+    font-size: var(--task-font-size);
+    font-family: var(--task-font-family);
+    color: #ffffff !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 #000;
+    letter-spacing: 0.5px;
+    z-index: 2;
+}
+
+.task-item.completed {
+    opacity: 0.6;
+    border-left-color: #444 !important;
+    background: rgba(10, 10, 10, 0.8);
+}
+
+.task-item.completed .task-text {
+    text-decoration: line-through;
+    color: #999 !important;
+    text-shadow: none;
+    font-weight: normal;
+}
+
+.checkbox {
+    width: 26px;
+    height: 26px;
+    border: 2px solid var(--dark-red);
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.completed .checkbox {
+    background: var(--red);
+    border-color: var(--red);
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: #555;
+    padding: 0 10px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.btn-edit:hover {
+    color: #fff;
+}
+
+.btn-del:hover {
+    color: var(--red);
+}
+
+.sortable-ghost {
+    opacity: 0;
+}
+
+.sortable-drag {
+    background: #000;
+    border: 2px solid var(--red);
+    opacity: 1 !important;
+    transform: scale(1.05);
+    z-index: 100;
+    transition: none !important;
+}
+
+.list-title {
+    color: #888;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 15px;
+    letter-spacing: 3px;
+    text-shadow: 1px 1px 2px #000;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+#completed-list {
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px dashed #333;
+}
+
+/* --- СТИЛИ ДЛЯ ЗАМЕТОК (NOTES) --- */
+#notes-modal .modal-box {
+    width: 85%;
+    max-width: 760px;
+    height: 80vh;
+    padding: 0;
+    border: 3px double var(--red);
+    position: relative;
+    background: #000;
+}
+
+.notes-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
+.notes-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+    border-bottom: 1px solid var(--dark-red);
+    background: rgba(20, 0, 0, 0.9);
+    align-items: center;
+}
+
+.toolbar-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+.toolbar-btn {
+    background: #111;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 5px 10px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toolbar-btn:active {
+    background: var(--red);
+    color: #000;
+}
+
+.toolbar-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.toolbar-select {
+    background: #000;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 5px;
+    outline: none;
+}
+
+/* Область редактора - МЯТАЯ БУМАГА */
+#notes-editor {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    outline: none;
+    font-family: 'Courier New', Courier, monospace;
+    color: #eee;
+    line-height: 1.5;
+    background-color: #222;
+    background-image: url('https://images.unsplash.com/photo-1574169208507-84376194878b?q=80&w=1000&auto=format&fit=crop');
+    background-size: cover;
+    background-blend-mode: multiply;
+    box-shadow: inset 0 0 100px 40px #000;
+    caret-color: var(--red);
+}
+
+/* Стили для чекбоксов внутри заметок */
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    /* Выравнивание по верху для многострочного текста */
+    margin: 5px 0;
+}
+
+.checklist-item input[type="checkbox"] {
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--red);
+    cursor: pointer;
+    margin-top: 4px;
+    /* Поправка по вертикали */
+}
+
+/* ВАЖНО: span для текста, чтобы Enter работал корректно */
+.checklist-item span {
+    flex: 1;
+    outline: none;
+    min-height: 1.5em;
+    word-break: break-word;
+}
+
+.notes-footer {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid var(--dark-red);
+    background: #111;
+}
+
+.notes-close-x {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 30px;
+    height: 30px;
+    background: #000;
+    border: 2px solid var(--red);
+    color: var(--red);
+    font-weight: bold;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    z-index: 10;
+}
+
+/* Модальные окна */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-box {
+    background: #111;
+    border: 2px solid var(--red);
+    padding: 25px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 0 30px var(--dark-red);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.modal-title {
+    color: var(--red);
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.edit-textarea {
+    width: 100%;
+    height: 120px;
+    background: #000;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 15px;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    font-family: inherit;
+    resize: none;
+}
+
+.range-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #333;
+    height: 6px;
+    outline: none;
+    margin: 25px 0;
+    border-radius: 3px;
+}
+
+.range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    background: var(--red);
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--red);
+}
+
+.font-select {
+    width: 100%;
+    background: #000;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 12px;
+    font-size: 1rem;
+    margin-bottom: 20px;
+    outline: none;
+    cursor: pointer;
+}
+
+.color-options {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin: 20px 0;
+}
+
+.color-opt {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s;
+}
+
+.color-opt.selected {
+    transform: scale(1.3);
+    border-color: #fff;
+    box-shadow: 0 0 15px currentColor;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #444;
+    background: transparent;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.modal-btn.primary {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.modal-btn:active {
+    background: #333;
+}
+
+.alarm-msg {
+    font-size: 1.3rem;
+    text-align: center;
+    margin-bottom: 25px;
+    font-weight: bold;
+    color: #fff;
+    line-height: 1.4;
+}
+
+/* TOAST NOTIFICATION */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 0, 0, 0.9);
+    color: #fff;
+    padding: 12px 24px;
+    border: 1px solid var(--red);
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    box-shadow: 0 0 10px var(--dark-red);
+    text-align: center;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+/* --- SUPABASE AUTH SECTION (RADIO FREQUENCY STYLE) --- */
+.auth-section {
+    border: 2px solid var(--dark-red);
+    padding: 15px;
+    margin-bottom: 25px;
+    background: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+}
+
+.auth-title {
+    color: var(--red);
+    font-size: 0.75rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.auth-status {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px dashed #444;
+    background: #000;
+}
+
+.status-offline {
+    color: #ff0000;
+    animation: blink-red 1s infinite;
+}
+
+.status-online {
+    color: #00ff00;
+    text-shadow: 0 0 10px #00ff00;
+}
+
+@keyframes blink-red {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.auth-input {
+    width: 100%;
+    background: #000;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    font-family: inherit;
+    text-transform: uppercase;
+    outline: none;
+}
+
+.auth-input::placeholder {
+    color: #555;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 1px;
+    transition: 0.2s;
+}
+
+.auth-btn:active {
+    background: var(--red);
+    color: #000;
+}
+
+.auth-info {
+    color: #888;
+    font-size: 0.75rem;
+    text-align: center;
+    margin: 10px 0;
+    line-height: 1.4;
+}
+
+.auth-user-email {
+    color: #00ff00;
+    font-size: 0.85rem;
+    text-align: center;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+.sync-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 8px 15px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.sync-indicator.visible {
+    opacity: 1;
+}
+
+/* ========== THE VOID MODE (РЕЖИМ ФОКУСИРОВКИ) ========== */
+/* Затемняем существующий overlay вместо создания нового */
+body.void-mode .overlay {
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.9) 50%, rgba(0, 0, 0, 0.95) 100%);
+    transition: background 0.8s ease;
+}
+
+/* Скрываем отвлекающие элементы */
+body.void-mode .header,
+body.void-mode #radio-control-box,
+body.void-mode .channel-row,
+body.void-mode .play-btn,
+body.void-mode .input-wrapper,
+body.void-mode .list-title,
+body.void-mode #completed-section {
+    display: none !important;
+}
+
+/* Скрываем все активные задачи кроме первой */
+body.void-mode #active-list li:not(:first-child) {
+    display: none;
+}
+
+/* Увеличиваем и подсвечиваем первую задачу */
+body.void-mode #active-list li:first-child {
+    font-size: 1.3rem;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+    border-left-width: 6px;
+    transition: all 0.5s ease;
+    margin-bottom: 30px;
+}
+
+body.void-mode #active-list li:first-child .task-text {
+    font-size: 1.3em;
+    text-shadow: 3px 3px 0 #000, 0 0 15px rgba(255, 0, 0, 0.3);
+}
+
+/* Центрируем workspace в режиме void */
+body.void-mode #workspace {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100vh;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Таймер и кнопки - усиливаем визуально */
+body.void-mode .control-box:nth-of-type(2) {
+    background: rgba(20, 0, 0, 0.95);
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.3);
+    transition: all 0.5s ease;
+}
+
+/* Увеличиваем таймер в режиме void */
+body.void-mode .timer-digits {
+    font-size: 4.5rem;
+    text-shadow: 0 0 25px var(--red), 0 0 50px var(--red);
+    transition: all 0.5s ease;
+}
+
+/* --- ДОПОЛНЕНИЕ ДЛЯ VOID РЕЖИМА (ЦЕНТРОВКА) --- */
+
+/* 1. Скрываем кнопки (карандаш и крестик) у активной задачи */
+body.void-mode #active-list li:first-child .btn-action {
+    display: none !important;
+}
+
+/* 2. Центрируем саму плашку задачи */
+body.void-mode #active-list li:first-child {
+    justify-content: center;
+    /* Собираем всё в центр */
+    padding-right: 15px;
+    /* Возвращаем баланс отступов (так как кнопок справа нет) */
+}
+
+/* 3. Убираем "растягивание" текста, чтобы он прижался к центру */
+body.void-mode #active-list li:first-child .task-text {
+    flex: 0 0 auto;
+    /* Текст занимает ровно столько места, сколько букв */
+    text-align: center;
+    max-width: 85%;
+    /* Чтобы слишком длинный текст не ломал верстку */
+}
