@@ -27,7 +27,7 @@ function initSupabase() {
 // ========== AUDIO LAZY LOADING ==========
 const AUDIO_URLS = {
     vecna: 'https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3',
-    gong: 'https://www.myinstants.com/media/sounds/undertakers-bell-1.mp3'
+    gong: 'undertakers-bell-1.mp3'
 };
 
 let audioLoaded = false;
@@ -220,10 +220,11 @@ const songs = [
 ];
 let curCh = 0;
 
-const sfxClick = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
-const sfxDel = new Audio("https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3");
+// const sfxClick = new Audio("2571-preview.mp3"); // Отключено: файл не нужен
+const sfxDel = new Audio("2857-preview.mp3");
 
 function playSfx(type) {
+    if (type === 'click') return; // Звук клика отключен
     const s = type === 'click' ? sfxClick : sfxDel;
     s.currentTime = 0; s.volume = 0.4;
     s.play().catch(() => { });
