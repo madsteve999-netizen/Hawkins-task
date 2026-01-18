@@ -609,7 +609,8 @@ body.chrono-mode .control-box {
     color: #fff;
     font-size: 1.2rem;
     padding: 15px;
-    padding-right: 120px; /* Увеличено для двух кнопок */
+    padding-right: 120px;
+    /* Увеличено для двух кнопок */
     outline: none;
 }
 
@@ -625,7 +626,8 @@ body.chrono-mode .control-box {
     justify-content: center;
     transition: all 0.3s ease;
     position: absolute;
-    right: 60px; /* Слева от кнопки + */
+    right: 60px;
+    /* Слева от кнопки + */
     top: 0;
     height: 100%;
 }
@@ -655,6 +657,30 @@ body.chrono-mode .control-box {
     border-color: var(--red);
     color: var(--red);
 }
+
+/* iOS Safari Fix: Явно сбрасываем состояния :focus и :active */
+.prepend-btn:focus {
+    outline: none;
+}
+
+.prepend-btn:active:not(.active) {
+    border-color: var(--dark-red);
+    color: #888;
+}
+
+/* Убедимся, что только класс .active управляет красной рамкой */
+.prepend-btn:not(.active) {
+    border-color: var(--dark-red);
+    color: #888;
+    background: transparent;
+    box-shadow: none;
+}
+
+.prepend-btn:not(.active) svg {
+    filter: none;
+    stroke-width: 2.5;
+}
+
 
 /* Кнопка добавления */
 .add-btn {
