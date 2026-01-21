@@ -1621,38 +1621,67 @@ async function handleLogin() {
     updateAuthUI();
 }
 
-// ========== TASK SYNCHRONIZATION (CLOUD TRUTH) ==========
+// ========== DEDUPLICATION UTILITY ==========
+/**
+ * Removes duplicate tasks from the array based on ID.
+ * If multiple tasks have the same ID, keeps only the first occurrence.
+ * @param {Array} taskArray - Array of tasks to deduplicate
+ * @returns {Array} - Deduplicated array of tasks
+ */
+function removeDuplicateTasks(taskArray) {
+    const seen = new Set();
+    const deduplicated = [];
+
+    for (const task of taskArray) {
+        const taskId = String(task.id);
+        if (!seen.has(taskId)) {
+            seen.add(taskId);
+            deduplicated.push(task);
+        } else {
+            console.log('Removing duplicate task:', taskId, task.txt);
+        }
+    }
+
+    return deduplicated;
+}
+
+// ========== TASK SYNCHRONIZATION (CLOUD TRUTH WITH MERGE LOGIC) ==========
 async function syncTasksOnLogin() {
     if (!currentUser || !supabaseClient) return;
     showSyncIndicator();
 
     try {
-        // 1. Get ALL cloud tasks (including deleted ones for comparison)
+        // 1. Get ALL cloud tasks (excluding soft-deleted)
         const { data: cloudTasks, error } = await supabaseClient
             .from('tasks')
             .select('*')
             .eq('user_id', currentUser.id)
+            .eq('is_deleted', false)
             .order('order_index', { ascending: true });
 
         if (error) throw error;
 
-        // 2. Create Map of cloud tasks by title for fast lookup
+        // 2. Create Maps for fast lookup by both ID and title
+        const cloudTasksById = new Map();
         const cloudTasksByTitle = new Map();
+
         if (cloudTasks) {
             cloudTasks.forEach(ct => {
+                cloudTasksById.set(String(ct.id), ct);
                 cloudTasksByTitle.set(ct.title, ct);
             });
         }
 
-        // 3. Process local tasks - upload ONLY if not in cloud by title
+        // 3. Process local tasks - upload ONLY if not in cloud by ID or title
         const localTasks = tasks;
         const uploadedTasks = [];
 
         for (const localTask of localTasks) {
-            const cloudMatch = cloudTasksByTitle.get(localTask.txt);
+            const cloudMatchById = cloudTasksById.get(String(localTask.id));
+            const cloudMatchByTitle = cloudTasksByTitle.get(localTask.txt);
 
-            if (!cloudMatch) {
-                // Task doesn't exist in cloud by title - upload it
+            if (!cloudMatchById && !cloudMatchByTitle) {
+                // Task doesn't exist in cloud - upload it
                 console.log('Uploading new local task:', localTask.txt);
 
                 const { data: newTask, error: uploadError } = await supabaseClient
@@ -1675,24 +1704,23 @@ async function syncTasksOnLogin() {
                     console.error('Upload error for task:', localTask.txt, uploadError);
                 }
             } else {
-                // Task exists in cloud - ignore local version (cloud is truth)
-                console.log('Task exists in cloud, ignoring local version:', localTask.txt);
+                // Task exists in cloud - cloud is truth
+                console.log('Task exists in cloud (by ID or title), using cloud version:', localTask.txt);
             }
         }
 
-        // 4. Fetch fresh cloud data after uploads (to get any newly inserted tasks)
+        // 4. Fetch fresh cloud data after uploads
         const { data: freshCloudTasks, error: refreshError } = await supabaseClient
             .from('tasks')
             .select('*')
             .eq('user_id', currentUser.id)
+            .eq('is_deleted', false)
             .order('order_index', { ascending: true });
 
         if (refreshError) throw refreshError;
 
-        // 5. Filter out soft-deleted tasks and convert to local format
-        const activeCloudTasks = (freshCloudTasks || []).filter(ct => !ct.is_deleted);
-
-        const convertedCloudTasks = activeCloudTasks.map(ct => ({
+        // 5. Convert cloud tasks to local format
+        const convertedCloudTasks = (freshCloudTasks || []).map(ct => ({
             id: ct.id,
             txt: ct.title,
             done: ct.is_completed,
@@ -1700,13 +1728,17 @@ async function syncTasksOnLogin() {
             order_index: ct.order_index || 0
         }));
 
-        // 6. REPLACE local state with cloud data (Cloud Truth)
+        // 6. MERGE LOGIC: Replace local tasks with cloud data
+        // This ensures cloud is the source of truth
         tasks = convertedCloudTasks;
 
-        // 7. Sort by order_index
+        // 7. CRITICAL: Remove any duplicates by ID (safety check)
+        tasks = removeDuplicateTasks(tasks);
+
+        // 8. Sort by order_index
         tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
-        // 8. Save and render
+        // 9. Save and render
         save();
         render();
 
@@ -1998,16 +2030,21 @@ function handleRealtimeEvent(payload) {
                 order_index: newRecord.order_index || 0
             };
 
-            // FIXED: Use String() comparison for consistency with UPDATE/DELETE
-            if (!tasks.find(t => String(t.id) === String(newTask.id))) {
+            // CRITICAL FIX: Check by ID to prevent duplicates
+            const existingTask = tasks.find(t => String(t.id) === String(newTask.id));
+            if (!existingTask) {
                 console.log('Adding new task from cloud:', newTask);
                 tasks.push(newTask);
+
+                // Remove duplicates and sort
+                tasks = removeDuplicateTasks(tasks);
                 tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
                 save();
                 render();
                 showToast('НОВАЯ ЗАДАЧА ИЗ ОБЛАКА');
             } else {
-                console.log('Task already exists, skipping:', newTask.id);
+                console.log('Task already exists, skipping INSERT:', newTask.id);
             }
         } else {
             console.log('Skipping deleted task:', newRecord.id);
@@ -2027,21 +2064,35 @@ function handleRealtimeEvent(payload) {
                 console.log('Soft-deleted task not found locally:', newRecord.id);
             }
         } else {
-            // Normal UPDATE (if not deleted)
-            const task = tasks.find(t => String(t.id) === String(newRecord.id));
-            if (task) {
-                console.log('Updating task:', newRecord.id);
-                task.txt = newRecord.title;
-                task.done = newRecord.is_completed;
-                task.color = newRecord.color || 'red';
-                task.order_index = newRecord.order_index || 0;
+            // CRITICAL FIX: Update existing task OR add if not found
+            const taskIndex = tasks.findIndex(t => String(t.id) === String(newRecord.id));
 
-                tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-                save();
-                render();
+            if (taskIndex !== -1) {
+                // Task exists - UPDATE it
+                console.log('Updating existing task:', newRecord.id);
+                tasks[taskIndex].txt = newRecord.title;
+                tasks[taskIndex].done = newRecord.is_completed;
+                tasks[taskIndex].color = newRecord.color || 'red';
+                tasks[taskIndex].order_index = newRecord.order_index || 0;
             } else {
-                console.log('Task not found for update:', newRecord.id);
+                // Task doesn't exist locally - ADD it (this handles the case where
+                // the task was edited on another device before this device loaded it)
+                console.log('Task not found locally, adding from UPDATE event:', newRecord.id);
+                tasks.push({
+                    id: newRecord.id,
+                    txt: newRecord.title,
+                    done: newRecord.is_completed,
+                    color: newRecord.color || 'red',
+                    order_index: newRecord.order_index || 0
+                });
             }
+
+            // Remove duplicates and sort
+            tasks = removeDuplicateTasks(tasks);
+            tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+            save();
+            render();
         }
     } else if (eventType === 'DELETE') {
         console.log('Processing DELETE event');
