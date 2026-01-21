@@ -169,6 +169,7 @@ let currentFontSize = 1.1;
 let currentFontFamily = "'Courier New', Courier, monospace";
 let taskToDeleteId = null; // Глобальная переменная для удаления
 let prependMode = false; // Режим добавления в начало списка
+let openMenuId = null; // Отслеживание открытого меню задачи
 
 function loadTasks() {
     let data = [];
@@ -1043,6 +1044,13 @@ function initApp() {
             }
         }
     });
+
+    // Close task menus when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.task-menu-dropdown') && !e.target.closest('.btn-menu')) {
+            closeAllTaskMenus();
+        }
+    });
 }
 
 function addTask() {
@@ -1190,6 +1198,42 @@ async function moveToTop(id) {
     }
 }
 
+/**
+ * Toggles the dropdown menu for a specific task
+ * @param {string} id - Task ID
+ * @param {Event} event - Click event to prevent propagation
+ */
+function toggleTaskMenu(id, event) {
+    event.stopPropagation(); // Prevent task toggle
+
+    const menu = document.querySelector(`li[data-id="${id}"] .task-menu-dropdown`);
+    if (!menu) return;
+
+    // Close previously open menu if different
+    if (openMenuId && openMenuId !== id) {
+        const prevMenu = document.querySelector(`li[data-id="${openMenuId}"] .task-menu-dropdown`);
+        if (prevMenu) {
+            prevMenu.classList.remove('open');
+        }
+    }
+
+    // Toggle current menu
+    menu.classList.toggle('open');
+
+    // Update tracking
+    openMenuId = menu.classList.contains('open') ? id : null;
+}
+
+/**
+ * Closes all open task menus
+ */
+function closeAllTaskMenus() {
+    document.querySelectorAll('.task-menu-dropdown.open').forEach(menu => {
+        menu.classList.remove('open');
+    });
+    openMenuId = null;
+}
+
 function save() {
     try { localStorage.setItem(DB_KEY, JSON.stringify(tasks)); } catch (e) { }
 }
@@ -1219,9 +1263,32 @@ function render() {
         li.innerHTML = `
             <div class="checkbox" onclick="toggle('${taskIdStr}')"></div>
             <span class="task-text" onclick="toggle('${taskIdStr}')">${escapeHtml(t.txt)}</span>
-            ${!t.done ? `<button class="btn-action btn-move-top" onclick="moveToTop('${taskIdStr}')" title="Переместить в начало">▲</button>` : ''}
-            <button class="btn-action btn-edit" onclick="openEditModal('${taskIdStr}')">✎</button>
-            <button class="btn-action btn-del" onclick="del('${taskIdStr}')">×</button>
+            ${!t.done ? `
+                <button class="btn-menu" onclick="toggleTaskMenu('${taskIdStr}', event)" title="Меню">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="2"/>
+                        <circle cx="12" cy="12" r="2"/>
+                        <circle cx="12" cy="19" r="2"/>
+                    </svg>
+                </button>
+                <div class="task-menu-dropdown">
+                    <button class="menu-item" onclick="moveToTop('${taskIdStr}'); closeAllTaskMenus();" title="Переместить в начало">
+                        <span class="menu-icon">▲</span>
+                        <span class="menu-label">ВВЕРХ</span>
+                    </button>
+                    <button class="menu-item" onclick="openEditModal('${taskIdStr}'); closeAllTaskMenus();" title="Редактировать">
+                        <span class="menu-icon">✎</span>
+                        <span class="menu-label">РЕДАКТИРОВАТЬ</span>
+                    </button>
+                    <button class="menu-item menu-item-danger" onclick="del('${taskIdStr}'); closeAllTaskMenus();" title="Удалить">
+                        <span class="menu-icon">×</span>
+                        <span class="menu-label">УДАЛИТЬ</span>
+                    </button>
+                </div>
+            ` : `
+                <button class="btn-action btn-edit" onclick="openEditModal('${taskIdStr}')">✎</button>
+                <button class="btn-action btn-del" onclick="del('${taskIdStr}')">×</button>
+            `}
         `;
 
         if (t.done) {

@@ -749,7 +749,7 @@ ul {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     touch-action: none;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .task-item.border-red {
@@ -855,6 +855,104 @@ ul {
 
 .btn-del:hover {
     color: var(--red);
+}
+
+/* Three-dot menu button */
+.btn-menu {
+    background: none;
+    border: none;
+    color: #555;
+    padding: 0 8px;
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.btn-menu svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.btn-menu:hover {
+    color: #fff;
+}
+
+/* Task menu dropdown */
+.task-menu-dropdown {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(10, 10, 10, 0.98);
+    border: 2px solid var(--dark-red);
+    border-radius: 4px;
+    padding: 5px;
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    min-width: 180px;
+}
+
+.task-menu-dropdown.open {
+    display: flex;
+    animation: menuSlideIn 0.2s ease-out;
+}
+
+@keyframes menuSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+.menu-item {
+    background: transparent;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.menu-item:hover {
+    border-color: var(--red);
+    color: #fff;
+    background: rgba(255, 0, 0, 0.1);
+}
+
+.menu-item-danger:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255, 0, 0, 0.2);
+}
+
+.menu-icon {
+    font-size: 1.2rem;
+    min-width: 20px;
+    text-align: center;
+}
+
+.menu-label {
+    flex: 1;
+    letter-spacing: 0.5px;
 }
 
 .sortable-ghost {
