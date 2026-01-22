@@ -818,8 +818,8 @@ function del(id) {
     const t = tasks.find(x => String(x.id) === String(id));
     if (!t) return;
 
-    if (!t.done) {
-        // Active task -> Show Warning
+    if (t.status !== 'completed') {
+        // Active or deferred task -> Show Warning
         taskToDeleteId = id;
         document.getElementById('delete-modal').classList.add('open');
     } else {
@@ -866,7 +866,7 @@ function toggleRadioPanel() {
 // === BURN ARCHIVE MODAL ===
 function openBurnModal() {
     // Check if there are any completed tasks
-    const completedTasks = tasks.filter(t => t.done);
+    const completedTasks = tasks.filter(t => t.status === 'completed');
     if (completedTasks.length === 0) {
         // No completed tasks to burn
         return;
@@ -885,14 +885,14 @@ async function confirmBurnArchive() {
 
 async function burnArchive() {
     // Get all completed tasks before filtering
-    const completedTasks = tasks.filter(t => t.done);
+    const completedTasks = tasks.filter(t => t.status === 'completed');
 
     if (completedTasks.length === 0) {
         return;
     }
 
     // Filter out completed tasks (keep only non-completed)
-    tasks = tasks.filter(t => !t.done);
+    tasks = tasks.filter(t => t.status !== 'completed');
 
     // Play effects
     playSfx('del');
@@ -1061,22 +1061,33 @@ function addTask() {
     const newTask = {
         id: Date.now(),
         txt: val,
-        done: false,
+        status: prependMode ? 'active' : 'deferred', // If prepend mode: active, else: deferred
         color: newSelectedColor,
-        order_index: prependMode ? -1 : tasks.length, // Временный индекс для начала списка
+        order_index: 0, // Will be recalculated below
         created_at: Date.now() // Timestamp создания задачи
     };
 
-    // Добавление в начало или конец в зависимости от режима
+    // FIX: If prepend mode is active, insert at the beginning of active tasks
     if (prependMode) {
-        tasks.unshift(newTask); // Добавить в начало массива
-        // Пересчитать order_index для всех задач
-        tasks.forEach((t, idx) => {
-            t.order_index = idx;
-        });
+        // Find the index of the first active task
+        const firstActiveIndex = tasks.findIndex(t => t.status === 'active');
+
+        if (firstActiveIndex !== -1) {
+            // Insert at the beginning of active tasks
+            tasks.splice(firstActiveIndex, 0, newTask);
+        } else {
+            // No active tasks exist, add at the beginning
+            tasks.unshift(newTask);
+        }
     } else {
-        tasks.push(newTask); // Добавить в конец массива
+        // Not prepend mode: add to end (will be sorted in deferred section by age)
+        tasks.push(newTask);
     }
+
+    // Recalculate order_index for all tasks
+    tasks.forEach((t, idx) => {
+        t.order_index = idx;
+    });
 
     inp.value = '';
     playSfx('click');
@@ -1106,7 +1117,8 @@ async function uploadTaskToCloud(task) {
             .insert({
                 user_id: currentUser.id,
                 title: task.txt,
-                is_completed: task.done,
+                is_completed: task.status === 'completed',
+                status: task.status || 'active', // NEW: Add status field for deferred tasks
                 color: task.color || 'red',
                 order_index: task.order_index || 0,
                 created_at: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString()
@@ -1150,14 +1162,20 @@ async function uploadTaskToCloud(task) {
 function toggle(id) {
     const t = tasks.find(x => String(x.id) === String(id));
     if (t) {
-        t.done = !t.done;
+        // Cycle through statuses: active → completed, deferred → completed, completed → active
+        if (t.status === 'active' || t.status === 'deferred') {
+            t.status = 'completed';
+        } else {
+            t.status = 'active';
+        }
+
         playSfx('click');
         save();
         render();
 
         // Sync to cloud if logged in
         if (currentUser) {
-            updateTaskInCloud(id, { is_completed: t.done });
+            updateTaskInCloud(id, { status: t.status }); // FIX: Sync status instead of is_completed
         }
     }
 }
@@ -1171,11 +1189,11 @@ async function moveToTop(id) {
 
     const task = tasks[taskIndex];
 
-    // Проверяем, что задача не завершена и не находится уже на первом месте
-    if (task.done) return;
+    // Проверяем, что задача активная (moveToTop работает только для активных задач)
+    if (task.status !== 'active') return;
 
     // Находим индекс первой активной задачи
-    const firstActiveIndex = tasks.findIndex(t => !t.done);
+    const firstActiveIndex = tasks.findIndex(t => t.status === 'active');
     if (firstActiveIndex === -1 || taskIndex === firstActiveIndex) return;
 
     // Удаляем задачу из текущей позиции
@@ -1197,6 +1215,26 @@ async function moveToTop(id) {
     if (currentUser) {
         // Обновляем order_index для всех задач в облаке
         await updateTaskOrderInCloud();
+    }
+}
+
+/**
+ * Перемещает задачу в раздел "ОТЛОЖКА"
+ */
+async function moveToDeferred(id) {
+    const task = tasks.find(x => String(x.id) === String(id));
+    if (!task) return;
+
+    // Меняем статус на 'deferred'
+    task.status = 'deferred';
+
+    playSfx('click');
+    save();
+    render();
+
+    // Синхронизация с облаком, если пользователь залогинен
+    if (currentUser) {
+        await updateTaskInCloud(id, { status: 'deferred' }); // FIX: Sync status instead of is_completed
     }
 }
 
@@ -1293,25 +1331,53 @@ function getAgeColorClass(days) {
 
 function render() {
     const act = document.getElementById('active-list');
+    const def = document.getElementById('deferred-list');
     const com = document.getElementById('completed-list');
 
     // PERFORMANCE: Use DocumentFragment instead of innerHTML in loop
     const actFragment = document.createDocumentFragment();
+    const defFragment = document.createDocumentFragment();
     const comFragment = document.createDocumentFragment();
 
+    // Migrate old tasks: convert 'done' field to 'status' field
     tasks.forEach(t => {
+        if (t.status === undefined) {
+            // Old task format - migrate to new format
+            if (t.done === true) {
+                t.status = 'completed';
+            } else {
+                t.status = 'active'; // Default old active tasks to 'active'
+            }
+            delete t.done; // Remove old field
+        }
+    });
+
+    // Separate tasks by status
+    const activeTasks = tasks.filter(t => t.status === 'active');
+    const deferredTasks = tasks.filter(t => t.status === 'deferred');
+    const completedTasks = tasks.filter(t => t.status === 'completed');
+
+    // Sort deferred tasks by age (oldest first)
+    deferredTasks.sort((a, b) => {
+        const ageA = a.created_at || 0;
+        const ageB = b.created_at || 0;
+        return ageA - ageB; // Oldest first (smallest timestamp first)
+    });
+
+    // Render function for a single task
+    const renderTask = (t) => {
         const li = document.createElement('li');
         const colorClass = t.color ? 'border-' + t.color : 'border-red';
-        li.className = `task-item ${t.done ? 'completed' : ''} ${colorClass}`;
+        li.className = `task-item ${t.status === 'completed' ? 'completed' : ''} ${colorClass}`;
         li.dataset.id = t.id;
 
         const taskIdStr = String(t.id);
 
-        // Calculate task age for active tasks
-        const ageDays = !t.done ? getTaskAgeDays(t) : -1;
+        // Calculate task age for non-completed tasks
+        const ageDays = t.status !== 'completed' ? getTaskAgeDays(t) : -1;
         let ageIndicator = '';
 
-        if (!t.done && ageDays >= 0) {
+        if (t.status !== 'completed' && ageDays >= 0) {
             if (ageDays === 0) {
                 // New task (created today) - show dash
                 ageIndicator = '<span class="task-age age-new">-</span>';
@@ -1325,7 +1391,7 @@ function render() {
         li.innerHTML = `
             <div class="checkbox" onclick="toggle('${taskIdStr}')"></div>
             <span class="task-text" onclick="toggle('${taskIdStr}')">${escapeHtml(t.txt)}</span>
-            ${!t.done ? `
+            ${t.status !== 'completed' ? `
                 ${ageIndicator}
                 <button class="btn-menu" onclick="toggleTaskMenu('${taskIdStr}', event)" title="Меню">
                     <svg viewBox="0 0 24 24">
@@ -1343,6 +1409,10 @@ function render() {
                         <span class="menu-icon">✎</span>
                         <span class="menu-label">РЕДАКТИРОВАТЬ</span>
                     </button>
+                    <button class="menu-item" onclick="moveToDeferred('${taskIdStr}'); closeAllTaskMenus();" title="Переместить в отложку">
+                        <span class="menu-icon">⏸</span>
+                        <span class="menu-label">В ОТЛОЖКУ</span>
+                    </button>
                     <button class="menu-item menu-item-danger" onclick="del('${taskIdStr}'); closeAllTaskMenus();" title="Удалить">
                         <span class="menu-icon">×</span>
                         <span class="menu-label">УДАЛИТЬ</span>
@@ -1354,17 +1424,20 @@ function render() {
             `}
         `;
 
-        if (t.done) {
-            comFragment.appendChild(li);
-        } else {
-            actFragment.appendChild(li);
-        }
-    });
+        return li;
+    };
+
+    // Render all tasks
+    activeTasks.forEach(t => actFragment.appendChild(renderTask(t)));
+    deferredTasks.forEach(t => defFragment.appendChild(renderTask(t)));
+    completedTasks.forEach(t => comFragment.appendChild(renderTask(t)));
 
     // Single DOM write per list (MUCH faster)
     act.innerHTML = '';
+    def.innerHTML = '';
     com.innerHTML = '';
     act.appendChild(actFragment);
+    def.appendChild(defFragment);
     com.appendChild(comFragment);
 }
 
@@ -1430,6 +1503,7 @@ let dragDebounceTimer = null;
 function initDrag() {
     if (typeof Sortable !== 'undefined') {
         const opts = {
+            group: 'tasks', // Allow dragging between all three lists
             animation: 150,
             delay: 200,
             delayOnTouchOnly: true,
@@ -1443,7 +1517,24 @@ function initDrag() {
             fallbackClass: 'sortable-fallback',
             fallbackOnBody: true,
             touchStartThreshold: 5,
-            onEnd: () => {
+            onEnd: (evt) => {
+                // Determine which list the task was dropped into
+                const targetListId = evt.to.id;
+                const taskId = evt.item.dataset.id;
+                const task = tasks.find(t => String(t.id) === String(taskId));
+
+                if (task) {
+                    // Update task status based on target list
+                    if (targetListId === 'active-list') {
+                        task.status = 'active';
+                    } else if (targetListId === 'deferred-list') {
+                        task.status = 'deferred';
+                    } else if (targetListId === 'completed-list') {
+                        task.status = 'completed';
+                    }
+                }
+
+                // Rebuild tasks array from DOM order
                 const newOrder = [];
                 document.querySelectorAll('.task-item').forEach(el => {
                     const found = tasks.find(t => t.id == el.dataset.id);
@@ -1459,6 +1550,9 @@ function initDrag() {
                 // INSTANT local save
                 save();
 
+                // Re-render to apply auto-sorting for deferred list
+                render();
+
                 // DEBOUNCED cloud sync (PERFORMANCE: Prevents request waterfall)
                 if (currentUser) {
                     clearTimeout(dragDebounceTimer);
@@ -1468,7 +1562,9 @@ function initDrag() {
                 }
             }
         };
+
         Sortable.create(document.getElementById('active-list'), opts);
+        Sortable.create(document.getElementById('deferred-list'), opts);
         Sortable.create(document.getElementById('completed-list'), opts);
     }
 }
@@ -1790,9 +1886,11 @@ async function updateTaskOrderInCloud() {
             id: t.id,
             user_id: currentUser.id,
             title: t.txt,
-            is_completed: t.done,
+            status: t.status || 'active', // FIX: Sync status field (active/deferred/completed)
+            is_completed: t.status === 'completed', // Derive from status for backward compatibility
             color: t.color || 'red',
-            order_index: t.order_index
+            order_index: t.order_index,
+            created_at: t.created_at ? new Date(t.created_at).toISOString() : new Date().toISOString() // Preserve timestamp
         }));
 
         // ADDED TIMEOUT: If network is slow, don't hang forever
@@ -1826,9 +1924,20 @@ async function updateTaskInCloud(taskId, updates) {
             setTimeout(() => reject(new Error('TIMEOUT')), 5000)
         );
 
+        // NEW: If is_completed is being updated, also update status field
+        const cloudUpdates = { ...updates };
+        if ('is_completed' in updates) {
+            cloudUpdates.status = updates.is_completed ? 'completed' : 'active';
+        }
+        // NEW: If status is provided directly, use it
+        if ('status' in updates) {
+            cloudUpdates.status = updates.status;
+            cloudUpdates.is_completed = updates.status === 'completed';
+        }
+
         const updatePromise = supabaseClient
             .from('tasks')
-            .update(updates)
+            .update(cloudUpdates)
             .eq('id', taskId)
             .eq('user_id', currentUser.id);
 
@@ -1889,14 +1998,26 @@ async function syncTasksOnLogin() {
 
         if (cloudTasks && cloudTasks.length > 0) {
             // Convert cloud tasks to local format
-            const cloudTasksConverted = cloudTasks.map(ct => ({
-                id: ct.id,
-                txt: ct.title,
-                done: ct.is_completed,
-                color: ct.color || 'red',
-                order_index: ct.order_index || 0,
-                created_at: ct.created_at ? new Date(ct.created_at).getTime() : Date.now()
-            }));
+            const cloudTasksConverted = cloudTasks.map(ct => {
+                // NEW: Properly map status field with backward compatibility
+                let status = 'active'; // default
+                if (ct.status) {
+                    // New format: use status field directly
+                    status = ct.status;
+                } else if (ct.is_completed) {
+                    // Old format: fall back to is_completed
+                    status = 'completed';
+                }
+
+                return {
+                    id: ct.id,
+                    txt: ct.title,
+                    status: status, // FIX: Use status instead of done
+                    color: ct.color || 'red',
+                    order_index: ct.order_index || 0,
+                    created_at: ct.created_at ? new Date(ct.created_at).getTime() : Date.now()
+                };
+            });
 
             // Merge with local tasks
             const localTasks = tasks.slice();
