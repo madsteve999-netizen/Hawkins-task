@@ -1063,7 +1063,8 @@ function addTask() {
         txt: val,
         done: false,
         color: newSelectedColor,
-        order_index: prependMode ? -1 : tasks.length // Временный индекс для начала списка
+        order_index: prependMode ? -1 : tasks.length, // Временный индекс для начала списка
+        created_at: Date.now() // Timestamp создания задачи
     };
 
     // Добавление в начало или конец в зависимости от режима
@@ -1107,7 +1108,8 @@ async function uploadTaskToCloud(task) {
                 title: task.txt,
                 is_completed: task.done,
                 color: task.color || 'red',
-                order_index: task.order_index || 0
+                order_index: task.order_index || 0,
+                created_at: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString()
             })
             .select()
             .single();
@@ -1245,6 +1247,50 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ========== HELPER FUNCTIONS ==========
+/**
+ * Removes duplicate tasks by ID, keeping the first occurrence
+ * @param {Array} taskList - Array of tasks
+ * @returns {Array} - Deduplicated array
+ */
+function removeDuplicateTasks(taskList) {
+    const seen = new Set();
+    return taskList.filter(task => {
+        const id = String(task.id);
+        if (seen.has(id)) {
+            return false;
+        }
+        seen.add(id);
+        return true;
+    });
+}
+
+// ========== TASK AGE TRACKING ==========
+/**
+ * Вычисляет возраст задачи в полных днях
+ * @param {Object} task - Объект задачи
+ * @returns {number} - Возраст в днях
+ */
+function getTaskAgeDays(task) {
+    if (!task.created_at) return 0;
+    const now = Date.now();
+    const ageMs = now - task.created_at;
+    const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+    return ageDays;
+}
+
+/**
+ * Определяет CSS-класс цвета на основе возраста задачи
+ * @param {number} days - Возраст в днях
+ * @returns {string} - CSS класс
+ */
+function getAgeColorClass(days) {
+    if (days >= 5) return 'age-critical';
+    if (days >= 3) return 'age-warning';
+    if (days >= 1) return 'age-normal';
+    return 'age-new';
+}
+
 function render() {
     const act = document.getElementById('active-list');
     const com = document.getElementById('completed-list');
@@ -1260,10 +1306,27 @@ function render() {
         li.dataset.id = t.id;
 
         const taskIdStr = String(t.id);
+
+        // Calculate task age for active tasks
+        const ageDays = !t.done ? getTaskAgeDays(t) : -1;
+        let ageIndicator = '';
+
+        if (!t.done && ageDays >= 0) {
+            if (ageDays === 0) {
+                // New task (created today) - show dash
+                ageIndicator = '<span class="task-age age-new">-</span>';
+            } else {
+                // Older task - show age in days
+                const ageColorClass = getAgeColorClass(ageDays);
+                ageIndicator = `<span class="task-age ${ageColorClass}">${ageDays}д</span>`;
+            }
+        }
+
         li.innerHTML = `
             <div class="checkbox" onclick="toggle('${taskIdStr}')"></div>
             <span class="task-text" onclick="toggle('${taskIdStr}')">${escapeHtml(t.txt)}</span>
             ${!t.done ? `
+                ${ageIndicator}
                 <button class="btn-menu" onclick="toggleTaskMenu('${taskIdStr}', event)" title="Меню">
                     <svg viewBox="0 0 24 24">
                         <circle cx="12" cy="5" r="2"/>
@@ -1805,6 +1868,77 @@ async function deleteTaskFromCloud(taskId) {
     }
 }
 
+// ========== TASKS SYNCHRONIZATION ==========
+async function syncTasksOnLogin() {
+    if (!currentUser || !supabaseClient) return;
+    showSyncIndicator();
+
+    try {
+        console.log('Syncing tasks from cloud...');
+
+        // Get all non-deleted tasks from cloud
+        const { data: cloudTasks, error } = await supabaseClient
+            .from('tasks')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('is_deleted', false);
+
+        if (error) throw error;
+
+        console.log('Cloud tasks received:', cloudTasks?.length || 0);
+
+        if (cloudTasks && cloudTasks.length > 0) {
+            // Convert cloud tasks to local format
+            const cloudTasksConverted = cloudTasks.map(ct => ({
+                id: ct.id,
+                txt: ct.title,
+                done: ct.is_completed,
+                color: ct.color || 'red',
+                order_index: ct.order_index || 0,
+                created_at: ct.created_at ? new Date(ct.created_at).getTime() : Date.now()
+            }));
+
+            // Merge with local tasks
+            const localTasks = tasks.slice();
+
+            // Update existing tasks or add new ones from cloud
+            cloudTasksConverted.forEach(cloudTask => {
+                const localIndex = localTasks.findIndex(t => String(t.id) === String(cloudTask.id));
+                if (localIndex !== -1) {
+                    // Update existing task with cloud data (cloud is source of truth)
+                    localTasks[localIndex] = cloudTask;
+                } else {
+                    // Add new task from cloud
+                    localTasks.push(cloudTask);
+                }
+            });
+
+            // Upload any local-only tasks to cloud
+            for (const localTask of localTasks) {
+                const existsInCloud = cloudTasksConverted.find(ct => String(ct.id) === String(localTask.id));
+                if (!existsInCloud) {
+                    console.log('Uploading local-only task to cloud:', localTask.id);
+                    await uploadTaskToCloud(localTask);
+                }
+            }
+
+            // Update local tasks
+            tasks = removeDuplicateTasks(localTasks);
+            tasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+            save();
+            render();
+
+            console.log('Tasks synced successfully. Total tasks:', tasks.length);
+        }
+    } catch (error) {
+        console.error('Tasks Sync Error:', error);
+        showToast('ОШИБКА СИНХРОНИЗАЦИИ ЗАДАЧ');
+    } finally {
+        hideSyncIndicator();
+    }
+}
+
 // ========== NOTES SYNCHRONIZATION ==========
 async function syncNotesOnLogin() {
     if (!currentUser || !supabaseClient) return;
@@ -1966,7 +2100,8 @@ function handleRealtimeEvent(payload) {
                 txt: newRecord.title,
                 done: newRecord.is_completed,
                 color: newRecord.color || 'red',
-                order_index: newRecord.order_index || 0
+                order_index: newRecord.order_index || 0,
+                created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
             };
 
             // CRITICAL FIX: Check by ID to prevent duplicates
@@ -2013,6 +2148,10 @@ function handleRealtimeEvent(payload) {
                 tasks[taskIndex].done = newRecord.is_completed;
                 tasks[taskIndex].color = newRecord.color || 'red';
                 tasks[taskIndex].order_index = newRecord.order_index || 0;
+                // Always update created_at from cloud if available
+                if (newRecord.created_at) {
+                    tasks[taskIndex].created_at = new Date(newRecord.created_at).getTime();
+                }
             } else {
                 // Task doesn't exist locally - ADD it (this handles the case where
                 // the task was edited on another device before this device loaded it)
@@ -2022,7 +2161,8 @@ function handleRealtimeEvent(payload) {
                     txt: newRecord.title,
                     done: newRecord.is_completed,
                     color: newRecord.color || 'red',
-                    order_index: newRecord.order_index || 0
+                    order_index: newRecord.order_index || 0,
+                    created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
                 });
             }
 

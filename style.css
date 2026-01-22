@@ -857,6 +857,59 @@ ul {
     color: var(--red);
 }
 
+/* Task Age Indicator */
+.task-age {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: auto;
+    margin-right: 8px;
+    white-space: nowrap;
+    user-select: none;
+    letter-spacing: 0.5px;
+}
+
+/* Age color states */
+.task-age.age-new {
+    color: #555;
+    background: rgba(85, 85, 85, 0.08);
+    opacity: 0.7;
+}
+
+.task-age.age-normal {
+    color: #666;
+    background: rgba(102, 102, 102, 0.1);
+}
+
+.task-age.age-warning {
+    color: #ff9100;
+    background: rgba(255, 145, 0, 0.15);
+    text-shadow: 0 0 4px rgba(255, 145, 0, 0.3);
+}
+
+.task-age.age-critical {
+    color: #ff0000;
+    background: rgba(255, 0, 0, 0.2);
+    text-shadow: 0 0 6px rgba(255, 0, 0, 0.5);
+    animation: age-pulse 2s ease-in-out infinite;
+}
+
+@keyframes age-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        text-shadow: 0 0 6px rgba(255, 0, 0, 0.5);
+    }
+
+    50% {
+        opacity: 0.85;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+    }
+}
+
 /* Three-dot menu button */
 .btn-menu {
     background: none;
