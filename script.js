@@ -1962,7 +1962,8 @@ async function uploadTask(task) {
             .insert({
                 user_id: currentUser.id,
                 title: task.txt,
-                is_completed: task.done,
+                status: task.status || 'active', // Use status field
+                is_completed: task.status === 'completed', // Derive from status for backward compatibility
                 color: task.color || 'red',
                 order_index: task.order_index || 0
             });
@@ -2136,9 +2137,16 @@ async function uploadNotesToCloud(content) {
 
 // ========== REALTIME SUBSCRIPTIONS ==========
 function subscribeToTasks() {
-    if (!currentUser || realtimeChannel || !supabaseClient) {
-        console.log('subscribeToTasks skipped:', { currentUser: !!currentUser, realtimeChannel: !!realtimeChannel, supabaseClient: !!supabaseClient });
+    if (!currentUser || !supabaseClient) {
+        console.log('subscribeToTasks skipped:', { currentUser: !!currentUser, supabaseClient: !!supabaseClient });
         return;
+    }
+
+    // CRITICAL FIX: Unsubscribe from old channel before creating new one
+    if (realtimeChannel) {
+        console.log('Unsubscribing from old realtime channel...');
+        supabaseClient.removeChannel(realtimeChannel);
+        realtimeChannel = null;
     }
 
     console.log('Creating Realtime subscription for user:', currentUser.id);
@@ -2163,9 +2171,16 @@ function subscribeToTasks() {
 }
 
 function subscribeToNotes() {
-    if (!currentUser || notesRealtimeChannel || !supabaseClient) {
-        console.log('subscribeToNotes skipped:', { currentUser: !!currentUser, notesRealtimeChannel: !!notesRealtimeChannel, supabaseClient: !!supabaseClient });
+    if (!currentUser || !supabaseClient) {
+        console.log('subscribeToNotes skipped:', { currentUser: !!currentUser, supabaseClient: !!supabaseClient });
         return;
+    }
+
+    // CRITICAL FIX: Unsubscribe from old channel before creating new one
+    if (notesRealtimeChannel) {
+        console.log('Unsubscribing from old notes realtime channel...');
+        supabaseClient.removeChannel(notesRealtimeChannel);
+        notesRealtimeChannel = null;
     }
 
     console.log('Creating Realtime subscription for notes, user:', currentUser.id);
@@ -2235,10 +2250,20 @@ function handleRealtimeEvent(payload) {
     if (eventType === 'INSERT') {
         // Only insert if not marked as deleted
         if (!newRecord.is_deleted) {
+            // Convert cloud task to local format with status field
+            let status = 'active'; // default
+            if (newRecord.status) {
+                // New format: use status field directly
+                status = newRecord.status;
+            } else if (newRecord.is_completed) {
+                // Old format: fall back to is_completed
+                status = 'completed';
+            }
+
             const newTask = {
                 id: newRecord.id,
                 txt: newRecord.title,
-                done: newRecord.is_completed,
+                status: status, // Use status instead of done
                 color: newRecord.color || 'red',
                 order_index: newRecord.order_index || 0,
                 created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
@@ -2281,11 +2306,21 @@ function handleRealtimeEvent(payload) {
             // CRITICAL FIX: Update existing task OR add if not found
             const taskIndex = tasks.findIndex(t => String(t.id) === String(newRecord.id));
 
+            // Convert cloud task status
+            let status = 'active'; // default
+            if (newRecord.status) {
+                // New format: use status field directly
+                status = newRecord.status;
+            } else if (newRecord.is_completed) {
+                // Old format: fall back to is_completed
+                status = 'completed';
+            }
+
             if (taskIndex !== -1) {
                 // Task exists - UPDATE it
                 console.log('Updating existing task:', newRecord.id);
                 tasks[taskIndex].txt = newRecord.title;
-                tasks[taskIndex].done = newRecord.is_completed;
+                tasks[taskIndex].status = status; // Use status instead of done
                 tasks[taskIndex].color = newRecord.color || 'red';
                 tasks[taskIndex].order_index = newRecord.order_index || 0;
                 // Always update created_at from cloud if available
@@ -2299,7 +2334,7 @@ function handleRealtimeEvent(payload) {
                 tasks.push({
                     id: newRecord.id,
                     txt: newRecord.title,
-                    done: newRecord.is_completed,
+                    status: status, // Use status instead of done
                     color: newRecord.color || 'red',
                     order_index: newRecord.order_index || 0,
                     created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
