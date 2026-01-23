@@ -1111,8 +1111,9 @@ async function addTask() {
 
         // CRITICAL FIX: If prepend mode was used, sync ALL task orders to cloud
         // This ensures other devices receive the correct order_index for all tasks
+        // EXCLUDE the newly added task to avoid duplicates (it was just uploaded above)
         if (wasPrependMode) {
-            await updateTaskOrderInCloud();
+            await updateTaskOrderInCloud(newTask.id);
         }
     }
 }
@@ -1984,40 +1985,40 @@ async function uploadTask(task) {
     }
 }
 
-async function updateTaskOrderInCloud() {
+async function updateTaskOrderInCloud(excludeTaskId = null) {
     if (!currentUser || !supabaseClient) return;
     showSyncIndicator();
 
     try {
-        // Perform a bulk upsert to update order_index for all tasks
-        const updates = tasks.map(t => ({
-            id: t.id,
-            user_id: currentUser.id,
-            title: t.txt,
-            status: t.status || 'active', // FIX: Sync status field (active/deferred/completed)
-            is_completed: t.status === 'completed', // Derive from status for backward compatibility
-            color: t.color || 'red',
-            order_index: t.order_index,
-            created_at: t.created_at ? new Date(t.created_at).toISOString() : new Date().toISOString() // Preserve timestamp
-        }));
+        // CRITICAL FIX: Filter out the excluded task (newly added) to avoid duplicates
+        const tasksToUpdate = excludeTaskId
+            ? tasks.filter(t => String(t.id) !== String(excludeTaskId))
+            : tasks;
 
-        // ADDED TIMEOUT: If network is slow, don't hang forever
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT')), 5000)
-        );
+        console.log(`Updating order for ${tasksToUpdate.length} tasks (excluding: ${excludeTaskId || 'none'})`);
 
-        const updatePromise = supabaseClient
-            .from('tasks')
-            .upsert(updates);
+        // CRITICAL FIX: Use UPDATE instead of UPSERT to avoid creating new records
+        // Update each task individually to ensure we only modify existing records
+        for (const task of tasksToUpdate) {
+            const { error } = await supabaseClient
+                .from('tasks')
+                .update({
+                    order_index: task.order_index,
+                    status: task.status || 'active',
+                    is_completed: task.status === 'completed'
+                })
+                .eq('id', task.id)
+                .eq('user_id', currentUser.id);
 
-        const { error } = await Promise.race([updatePromise, timeoutPromise]);
+            if (error) {
+                console.error(`Failed to update task ${task.id}:`, error);
+            }
+        }
 
-        if (error) throw error;
+        console.log('Order update complete');
     } catch (error) {
         console.error('Update Order Error:', error);
-        if (error.message === 'TIMEOUT') {
-            showToast('СЕТЬ ТОРМОЗИТ: ПОРЯДОК НЕ СОХРАНЕН');
-        }
+        showToast('ОШИБКА ОБНОВЛЕНИЯ ПОРЯДКА');
     } finally {
         hideSyncIndicator();
     }
