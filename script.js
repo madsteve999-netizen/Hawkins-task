@@ -2280,9 +2280,17 @@ function handleRealtimeEvent(payload) {
                 created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
             };
 
-            // CRITICAL FIX: Check by ID to prevent duplicates
-            const existingTask = tasks.find(t => String(t.id) === String(newTask.id));
-            if (!existingTask) {
+            // CRITICAL FIX: Check by ID AND by content to prevent duplicates during race condition
+            // Race condition: task uploaded to cloud, INSERT event arrives before local ID is updated
+            const existingTaskById = tasks.find(t => String(t.id) === String(newTask.id));
+
+            // Also check by text + created_at to catch tasks that haven't had their ID updated yet
+            const existingTaskByContent = tasks.find(t =>
+                t.txt === newTask.txt &&
+                Math.abs(t.created_at - newTask.created_at) < 2000 // Within 2 seconds
+            );
+
+            if (!existingTaskById && !existingTaskByContent) {
                 console.log('Adding new task from cloud:', newTask);
                 tasks.push(newTask);
 
@@ -2294,7 +2302,7 @@ function handleRealtimeEvent(payload) {
                 render();
                 showToast('НОВАЯ ЗАДАЧА ИЗ ОБЛАКА');
             } else {
-                console.log('Task already exists, skipping INSERT:', newTask.id);
+                console.log('Task already exists locally, skipping INSERT:', newTask.id, 'matched by:', existingTaskById ? 'ID' : 'content');
             }
         } else {
             console.log('Skipping deleted task:', newRecord.id);
