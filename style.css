@@ -1577,8 +1577,8 @@ body.void-mode #active-list li:first-child .task-text {
     border: 2px solid var(--red);
     padding: 20px;
     color: #fff;
-    font-size: 0.9rem;
-    /* Smaller font as requested */
+    font-size: 0.7rem;
+    /* Half size as requested */
     font-family: var(--task-font-family, 'Courier New', monospace);
     max-width: 90vw;
     width: auto;
