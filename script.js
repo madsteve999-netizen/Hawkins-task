@@ -14,7 +14,13 @@ function initSupabase() {
         if (window.supabase) {
             const supabaseUrl = 'https://jiovbimhoitawrtkqxmp.supabase.co';
             const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imppb3ZiaW1ob2l0YXdydGtxeG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMDc4NzMsImV4cCI6MjA4MzU4Mzg3M30.5-sBNX4Z5HcmMClmaySgoDDT2IDw3swcyYLZo3GnMCM';
-            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+                auth: {
+                    persistSession: true,
+                    detectSessionInUrl: false, // Disable URL detection to prevent hash fragments issues on iOS
+                    autoRefreshToken: true
+                }
+            });
             console.log('Supabase initialized successfully');
         } else {
             console.warn('Supabase library not loaded');
@@ -111,11 +117,11 @@ async function initializeApp() {
         if (supabaseClient && !isOfflineMode) {
             const authPromise = supabaseClient.auth.getSession();
 
-            // Set timeout for connection (3 seconds)
+            // Set timeout for connection (10 seconds for mobile)
             connectionTimeout = setTimeout(() => {
                 console.warn('Connection timeout - showing modal');
                 showConnectionModal();
-            }, 3000);
+            }, 10000);
 
             try {
                 const { data, error } = await authPromise;
