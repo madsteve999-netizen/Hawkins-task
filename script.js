@@ -2280,6 +2280,7 @@ async function updateTaskOrderInCloud(excludeTaskId = null) {
             user_id: currentUser.id,
             order_index: task.order_index,
             status: task.status || 'active',
+            container_type: task.container_type || 'today', // CRITICAL: Save container type
             is_completed: task.status === 'completed',
             title: task.txt,
             color: task.color || 'red',
