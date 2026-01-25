@@ -102,6 +102,100 @@ async function retryConnection() {
     await initializeApp();
 }
 
+// ========== MAGIC MIDNIGHT: AUTO-ROTATION ALGORITHM ==========
+/**
+ * Проверяет дату последнего запуска и выполняет ротацию задач при наступлении новых суток
+ */
+function checkAndRotateTasks() {
+    try {
+        const ROTATION_KEY = 'last_rotation_date';
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Сброс времени до начала дня
+
+        const lastRotationStr = localStorage.getItem(ROTATION_KEY);
+
+        if (!lastRotationStr) {
+            // Первый запуск - сохраняем текущую дату
+            localStorage.setItem(ROTATION_KEY, today.toISOString());
+            console.log('First run - rotation date set to:', today.toISOString());
+            return;
+        }
+
+        const lastRotation = new Date(lastRotationStr);
+        lastRotation.setHours(0, 0, 0, 0);
+
+        // Вычисляем разницу в днях
+        const daysDiff = Math.floor((today - lastRotation) / (1000 * 60 * 60 * 24));
+
+        if (daysDiff > 0) {
+            console.log(`Days passed since last rotation: ${daysDiff}. Rotating tasks...`);
+
+            // Выполняем ротацию
+            rotateTasks();
+
+            // Обновляем дату последней ротации
+            localStorage.setItem(ROTATION_KEY, today.toISOString());
+
+            // Сохраняем изменения
+            save();
+
+            console.log('Task rotation completed. New rotation date:', today.toISOString());
+        } else {
+            console.log('No rotation needed. Last rotation was today.');
+        }
+    } catch (error) {
+        console.error('Error in checkAndRotateTasks:', error);
+    }
+}
+
+/**
+ * Выполняет ротацию задач между контейнерами
+ */
+function rotateTasks() {
+    // Разделяем задачи по контейнерам
+    const todayTasks = tasks.filter(t => t.container_type === 'today');
+    const tomorrowTasks = tasks.filter(t => t.container_type === 'tomorrow');
+    const afterTomorrowTasks = tasks.filter(t => t.container_type === 'after_tomorrow');
+    const otherTasks = tasks.filter(t => !['today', 'tomorrow', 'after_tomorrow'].includes(t.container_type));
+
+    // Ротация:
+    // 1. Невыполненные задачи из СЕГОДНЯ остаются в СЕГОДНЯ (накапливаются)
+    const incompleteTodayTasks = todayTasks.filter(t => t.status !== 'completed');
+
+    // 2. ЗАВТРА → СЕГОДНЯ (добавляются в конец списка СЕГОДНЯ)
+    tomorrowTasks.forEach(t => {
+        t.container_type = 'today';
+    });
+
+    // 3. ПОСЛЕЗАВТРА → ЗАВТРА
+    afterTomorrowTasks.forEach(t => {
+        t.container_type = 'tomorrow';
+    });
+
+    // 4. ПОСЛЕЗАВТРА становится пустым (задачи уже перемещены)
+
+    // Пересобираем массив задач в правильном порядке:
+    // СЕГОДНЯ (старые невыполненные) + СЕГОДНЯ (пришедшие из ЗАВТРА) + ЗАВТРА (пришедшие из ПОСЛЕЗАВТРА) + остальные
+    tasks = [
+        ...incompleteTodayTasks,
+        ...tomorrowTasks,
+        ...afterTomorrowTasks,
+        ...otherTasks
+    ];
+
+    // Пересчитываем order_index
+    tasks.forEach((t, idx) => {
+        t.order_index = idx;
+    });
+
+    console.log(`Rotation summary:
+        - Incomplete TODAY tasks: ${incompleteTodayTasks.length}
+        - Tasks moved from TOMORROW to TODAY: ${tomorrowTasks.length}
+        - Tasks moved from AFTER_TOMORROW to TOMORROW: ${afterTomorrowTasks.length}
+        - AFTER_TOMORROW is now empty
+    `);
+}
+
 // ========== APP INITIALIZATION ==========
 async function initializeApp() {
     try {
@@ -110,7 +204,13 @@ async function initializeApp() {
         // Initialize Supabase
         initSupabase();
 
-        // Load tasks and render UI
+        // CRITICAL FIX: Load tasks FIRST, then check rotation, then render
+        // This ensures tasks are loaded before rotation algorithm runs
+
+        // Check and rotate tasks if needed (MAGIC MIDNIGHT algorithm)
+        checkAndRotateTasks();
+
+        // Render UI AFTER rotation
         render();
 
         // Try to check auth state with timeout
@@ -1069,6 +1169,7 @@ async function addTask() {
         id: Date.now(),
         txt: val,
         status: prependMode ? 'active' : 'deferred', // If prepend mode: active, else: deferred
+        container_type: prependMode ? 'today' : 'deferred', // NEW: Container type for 3-day planning
         color: prependMode ? newSelectedColor : 'grey', // Серый для отложенных задач
         order_index: 0, // Will be recalculated below
         created_at: Date.now() // Timestamp создания задачи
@@ -1136,7 +1237,8 @@ async function uploadTaskToCloud(task) {
                 user_id: currentUser.id,
                 title: task.txt,
                 is_completed: task.status === 'completed',
-                status: task.status || 'active', // NEW: Add status field for deferred tasks
+                status: task.status || 'active',
+                container_type: task.container_type || 'today', // NEW: Add container_type field
                 color: task.color || 'red',
                 order_index: task.order_index || 0,
                 created_at: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString()
@@ -1200,14 +1302,100 @@ async function uploadTaskToCloud(task) {
     // CRITICAL: NO hideSyncIndicator() - sync is non-blocking
 }
 
+// ========== UPDATE TASK IN CLOUD ==========
+async function updateTaskInCloud(taskId, updates) {
+    if (!currentUser || !supabaseClient) return;
+
+    try {
+        console.log('Updating task in cloud:', taskId, updates);
+
+        const { error } = await supabaseClient
+            .from('tasks')
+            .update(updates)
+            .eq('id', taskId)
+            .eq('user_id', currentUser.id); // CRITICAL: RLS policy requires user_id check
+
+        if (error) {
+            console.error('Update task error:', error);
+            throw error;
+        }
+
+        console.log('✓ Task updated in cloud successfully');
+    } catch (error) {
+        console.error('updateTaskInCloud error:', error);
+    }
+}
+
+// ========== UPDATE TASK ORDER IN CLOUD ==========
+async function updateTaskOrderInCloud(excludeTaskId = null) {
+    if (!currentUser || !supabaseClient) return;
+
+    try {
+        console.log('Updating task order in cloud...');
+
+        // Update order_index and container_type for all tasks
+        const updates = tasks
+            .filter(t => excludeTaskId ? String(t.id) !== String(excludeTaskId) : true)
+            .map(t => ({
+                id: t.id,
+                order_index: t.order_index,
+                container_type: t.container_type,
+                status: t.status
+            }));
+
+        // Update each task individually (batch update doesn't work well with RLS)
+        for (const update of updates) {
+            await supabaseClient
+                .from('tasks')
+                .update({
+                    order_index: update.order_index,
+                    container_type: update.container_type,
+                    status: update.status
+                })
+                .eq('id', update.id)
+                .eq('user_id', currentUser.id);
+        }
+
+        console.log(`✓ Updated ${updates.length} tasks order in cloud`);
+    } catch (error) {
+        console.error('updateTaskOrderInCloud error:', error);
+    }
+}
+
+// ========== DELETE TASK FROM CLOUD ==========
+async function deleteTaskFromCloud(taskId) {
+    if (!currentUser || !supabaseClient) return;
+
+    try {
+        console.log('Deleting task from cloud:', taskId);
+
+        const { error } = await supabaseClient
+            .from('tasks')
+            .update({ is_deleted: true })
+            .eq('id', taskId)
+            .eq('user_id', currentUser.id); // CRITICAL: RLS policy requires user_id check
+
+        if (error) {
+            console.error('Delete task error:', error);
+            throw error;
+        }
+
+        console.log('✓ Task deleted from cloud successfully');
+    } catch (error) {
+        console.error('deleteTaskFromCloud error:', error);
+    }
+}
+
 function toggle(id) {
     const t = tasks.find(x => String(x.id) === String(id));
     if (t) {
-        // Cycle through statuses: active → completed, deferred → completed, completed → active
+        // Cycle through statuses: active → completed, deferred → completed, completed → today
         if (t.status === 'active' || t.status === 'deferred') {
             t.status = 'completed';
+            t.container_type = 'archived';
         } else {
             t.status = 'active';
+            t.container_type = 'today'; // Return to TODAY container
         }
 
         playSfx('click');
@@ -1216,32 +1404,33 @@ function toggle(id) {
 
         // Sync to cloud if logged in
         if (currentUser) {
-            updateTaskInCloud(id, { status: t.status }); // FIX: Sync status instead of is_completed
+            updateTaskInCloud(id, { status: t.status, container_type: t.container_type });
         }
     }
 }
 
 /**
- * Перемещает задачу в начало списка активных задач
+ * Перемещает задачу в начало списка текущего контейнера
  */
 async function moveToTop(id) {
     const taskIndex = tasks.findIndex(x => String(x.id) === String(id));
     if (taskIndex === -1) return;
 
     const task = tasks[taskIndex];
+    const currentContainer = task.container_type;
 
-    // Проверяем, что задача активная (moveToTop работает только для активных задач)
-    if (task.status !== 'active') return;
+    // Проверяем, что задача в одном из трех контейнеров планирования
+    if (!['today', 'tomorrow', 'after_tomorrow'].includes(currentContainer)) return;
 
-    // Находим индекс первой активной задачи
-    const firstActiveIndex = tasks.findIndex(t => t.status === 'active');
-    if (firstActiveIndex === -1 || taskIndex === firstActiveIndex) return;
+    // Находим индекс первой задачи в том же контейнере
+    const firstInContainerIndex = tasks.findIndex(t => t.container_type === currentContainer);
+    if (firstInContainerIndex === -1 || taskIndex === firstInContainerIndex) return;
 
     // Удаляем задачу из текущей позиции
     tasks.splice(taskIndex, 1);
 
-    // Вставляем задачу в начало списка активных задач
-    tasks.splice(firstActiveIndex, 0, task);
+    // Вставляем задачу в начало списка того же контейнера
+    tasks.splice(firstInContainerIndex, 0, task);
 
     // Пересчитываем order_index для всех задач
     tasks.forEach((t, idx) => {
@@ -1266,8 +1455,9 @@ async function moveToDeferred(id) {
     const task = tasks.find(x => String(x.id) === String(id));
     if (!task) return;
 
-    // Меняем статус на 'deferred' и цвет на серый
+    // Меняем статус на 'deferred', container_type на 'deferred' и цвет на серый
     task.status = 'deferred';
+    task.container_type = 'deferred';
     task.color = 'grey';
 
     playSfx('click');
@@ -1276,33 +1466,34 @@ async function moveToDeferred(id) {
 
     // Синхронизация с облаком, если пользователь залогинен
     if (currentUser) {
-        await updateTaskInCloud(id, { status: 'deferred', color: 'grey' }); // Синхронизируем статус и цвет
+        await updateTaskInCloud(id, { status: 'deferred', container_type: 'deferred', color: 'grey' });
     }
 }
 
 /**
- * Перемещает задачу из отложенных в начало списка активных
+ * Перемещает задачу из отложенных в начало списка СЕГОДНЯ
  */
-async function moveToActive(id) {
+async function moveToToday(id) {
     const taskIndex = tasks.findIndex(x => String(x.id) === String(id));
     if (taskIndex === -1) return;
 
     const task = tasks[taskIndex];
 
-    // Меняем статус на 'active'
+    // Меняем статус на 'active' и контейнер на 'today'
     task.status = 'active';
+    task.container_type = 'today';
 
     // Удаляем задачу из текущей позиции
     tasks.splice(taskIndex, 1);
 
-    // Находим индекс первой активной задачи
-    const firstActiveIndex = tasks.findIndex(t => t.status === 'active');
+    // Находим индекс первой задачи в контейнере СЕГОДНЯ
+    const firstTodayIndex = tasks.findIndex(t => t.container_type === 'today');
 
-    // Вставляем задачу в начало списка активных задач
-    if (firstActiveIndex !== -1) {
-        tasks.splice(firstActiveIndex, 0, task);
+    // Вставляем задачу в начало списка СЕГОДНЯ
+    if (firstTodayIndex !== -1) {
+        tasks.splice(firstTodayIndex, 0, task);
     } else {
-        // Нет активных задач, добавляем в начало массива
+        // Нет задач в СЕГОДНЯ, добавляем в начало массива
         tasks.unshift(task);
     }
 
@@ -1317,7 +1508,7 @@ async function moveToActive(id) {
 
     // Синхронизация с облаком, если пользователь залогинен
     if (currentUser) {
-        await updateTaskInCloud(id, { status: 'active' });
+        await updateTaskInCloud(id, { status: 'active', container_type: 'today' });
         await updateTaskOrderInCloud();
     }
 }
@@ -1413,33 +1604,53 @@ function getAgeColorClass(days) {
     return 'age-new';
 }
 
+
 function render() {
-    const act = document.getElementById('active-list');
+    const todayList = document.getElementById('today-list');
+    const tomorrowList = document.getElementById('tomorrow-list');
+    const afterTomorrowList = document.getElementById('after-tomorrow-list');
     const def = document.getElementById('deferred-list');
     const com = document.getElementById('completed-list');
 
     // PERFORMANCE: Use DocumentFragment instead of innerHTML in loop
-    const actFragment = document.createDocumentFragment();
+    const todayFragment = document.createDocumentFragment();
+    const tomorrowFragment = document.createDocumentFragment();
+    const afterTomorrowFragment = document.createDocumentFragment();
     const defFragment = document.createDocumentFragment();
     const comFragment = document.createDocumentFragment();
 
-    // Migrate old tasks: convert 'done' field to 'status' field
+    // Migrate old tasks: convert 'done' field to 'status' field and add container_type
     tasks.forEach(t => {
+        // Migrate old 'done' field to 'status'
         if (t.status === undefined) {
-            // Old task format - migrate to new format
             if (t.done === true) {
                 t.status = 'completed';
             } else {
-                t.status = 'active'; // Default old active tasks to 'active'
+                t.status = 'active';
             }
-            delete t.done; // Remove old field
+            delete t.done;
+        }
+
+        // Migrate tasks without container_type
+        if (t.container_type === undefined) {
+            if (t.status === 'completed') {
+                t.container_type = 'archived';
+            } else if (t.status === 'deferred') {
+                t.container_type = 'deferred';
+            } else if (t.status === 'active') {
+                t.container_type = 'today'; // Default all active tasks to 'today'
+            } else {
+                t.container_type = 'today';
+            }
         }
     });
 
-    // Separate tasks by status
-    const activeTasks = tasks.filter(t => t.status === 'active');
-    const deferredTasks = tasks.filter(t => t.status === 'deferred');
-    const completedTasks = tasks.filter(t => t.status === 'completed');
+    // Separate tasks by container_type
+    const todayTasks = tasks.filter(t => t.container_type === 'today');
+    const tomorrowTasks = tasks.filter(t => t.container_type === 'tomorrow');
+    const afterTomorrowTasks = tasks.filter(t => t.container_type === 'after_tomorrow');
+    const deferredTasks = tasks.filter(t => t.container_type === 'deferred');
+    const completedTasks = tasks.filter(t => t.status === 'completed' || t.container_type === 'archived');
 
     // Sort deferred tasks by age (oldest first)
     deferredTasks.sort((a, b) => {
@@ -1485,7 +1696,7 @@ function render() {
                     </svg>
                 </button>
                 <div class="task-menu-dropdown">
-                    ${t.status === 'active' ? `
+                    ${t.container_type === 'today' || t.container_type === 'tomorrow' || t.container_type === 'after_tomorrow' ? `
                         <button class="menu-item" onclick="moveToTop('${taskIdStr}'); closeAllTaskMenus();" title="Переместить в начало">
                             <span class="menu-icon">▲</span>
                             <span class="menu-label">ВВЕРХ</span>
@@ -1506,9 +1717,9 @@ function render() {
                             <span class="menu-label">УДАЛИТЬ</span>
                         </button>
                     ` : `
-                        <button class="menu-item" onclick="moveToActive('${taskIdStr}'); closeAllTaskMenus();" title="Переместить в активные">
+                        <button class="menu-item" onclick="moveToToday('${taskIdStr}'); closeAllTaskMenus();" title="Переместить в СЕГОДНЯ">
                             <span class="menu-icon">▲</span>
-                            <span class="menu-label">В АКТИВНЫЕ</span>
+                            <span class="menu-label">В СЕГОДНЯ</span>
                         </button>
                         <button class="menu-item" onclick="openEditModal('${taskIdStr}'); closeAllTaskMenus();" title="Редактировать">
                             <span class="menu-icon">✎</span>
@@ -1562,18 +1773,25 @@ function render() {
     };
 
     // Render all tasks
-    activeTasks.forEach(t => actFragment.appendChild(renderTask(t)));
+    todayTasks.forEach(t => todayFragment.appendChild(renderTask(t)));
+    tomorrowTasks.forEach(t => tomorrowFragment.appendChild(renderTask(t)));
+    afterTomorrowTasks.forEach(t => afterTomorrowFragment.appendChild(renderTask(t)));
     deferredTasks.forEach(t => defFragment.appendChild(renderTask(t)));
     completedTasks.forEach(t => comFragment.appendChild(renderTask(t)));
 
     // Single DOM write per list (MUCH faster)
-    act.innerHTML = '';
+    todayList.innerHTML = '';
+    tomorrowList.innerHTML = '';
+    afterTomorrowList.innerHTML = '';
     def.innerHTML = '';
     com.innerHTML = '';
-    act.appendChild(actFragment);
+    todayList.appendChild(todayFragment);
+    tomorrowList.appendChild(tomorrowFragment);
+    afterTomorrowList.appendChild(afterTomorrowFragment);
     def.appendChild(defFragment);
     com.appendChild(comFragment);
 }
+
 
 function setCh(idx) {
     curCh = idx;
@@ -1637,7 +1855,7 @@ let dragDebounceTimer = null;
 function initDrag() {
     if (typeof Sortable !== 'undefined') {
         const opts = {
-            group: 'tasks', // Allow dragging between all three lists
+            group: 'tasks', // Allow dragging between all five lists
             animation: 150,
             delay: 200,
             delayOnTouchOnly: true,
@@ -1660,13 +1878,22 @@ function initDrag() {
                 const task = tasks.find(t => String(t.id) === String(taskId));
 
                 if (task) {
-                    // Update task status based on target list
-                    if (targetListId === 'active-list') {
+                    // Update task status and container_type based on target list
+                    if (targetListId === 'today-list') {
                         task.status = 'active';
+                        task.container_type = 'today';
+                    } else if (targetListId === 'tomorrow-list') {
+                        task.status = 'active';
+                        task.container_type = 'tomorrow';
+                    } else if (targetListId === 'after-tomorrow-list') {
+                        task.status = 'active';
+                        task.container_type = 'after_tomorrow';
                     } else if (targetListId === 'deferred-list') {
                         task.status = 'deferred';
+                        task.container_type = 'deferred';
                     } else if (targetListId === 'completed-list') {
                         task.status = 'completed';
+                        task.container_type = 'archived';
                     }
                 }
 
@@ -1689,21 +1916,26 @@ function initDrag() {
                 // Re-render to apply auto-sorting for deferred list
                 render();
 
-                // DEBOUNCED cloud sync (PERFORMANCE: Prevents request waterfall)
-                if (currentUser) {
-                    clearTimeout(dragDebounceTimer);
-                    dragDebounceTimer = setTimeout(() => {
-                        updateTaskOrderInCloud();
-                    }, 500); // OPTIMIZATION: Reduced from 2000ms to 500ms for faster sync
+                // CRITICAL FIX: Immediate cloud sync for moved task to prevent Realtime conflicts
+                if (currentUser && task) {
+                    // Immediately update the moved task in cloud
+                    updateTaskInCloud(taskId, {
+                        status: task.status,
+                        container_type: task.container_type,
+                        order_index: task.order_index
+                    });
                 }
             }
         };
 
-        Sortable.create(document.getElementById('active-list'), opts);
+        Sortable.create(document.getElementById('today-list'), opts);
+        Sortable.create(document.getElementById('tomorrow-list'), opts);
+        Sortable.create(document.getElementById('after-tomorrow-list'), opts);
         Sortable.create(document.getElementById('deferred-list'), opts);
         Sortable.create(document.getElementById('completed-list'), opts);
     }
 }
+
 
 window.onload = initApp;
 
@@ -1975,6 +2207,7 @@ async function syncTasksOnLogin() {
                 id: ct.id,
                 txt: ct.title,
                 status: status, // Use status instead of done
+                container_type: ct.container_type || (status === 'completed' ? 'archived' : 'today'), // NEW: Load container_type
                 color: ct.color || 'red',
                 order_index: ct.order_index || 0,
                 created_at: ct.created_at ? new Date(ct.created_at).getTime() : Date.now()
