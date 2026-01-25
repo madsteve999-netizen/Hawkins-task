@@ -181,28 +181,17 @@
                 </div>
                 <!-- Выбор цвета для новой задачи -->
                 <div class="new-task-colors">
-                    <div class="new-color-opt" style="background:var(--color-grey)" onclick="selectNewColor('grey')"
-                        id="new-col-grey"></div>
-                    <div class="new-color-opt selected" style="background:var(--color-red)"
-                        onclick="selectNewColor('red')" id="new-col-red"></div>
+                    <div class="new-color-opt" style="background:var(--color-red)" onclick="selectNewColor('red')"
+                        id="new-col-red"></div>
                     <div class="new-color-opt" style="background:var(--color-yellow)" onclick="selectNewColor('yellow')"
                         id="new-col-yellow"></div>
-                    <div class="new-color-opt" style="background:var(--color-blue)" onclick="selectNewColor('blue')"
-                        id="new-col-blue"></div>
                     <div class="new-color-opt" style="background:var(--color-green)" onclick="selectNewColor('green')"
                         id="new-col-green"></div>
-                    <!-- NEW: 5 additional colors -->
-                    <div class="new-color-opt" style="background:var(--color-orange)" onclick="selectNewColor('orange')"
-                        id="new-col-orange"></div>
-                    <div class="new-color-opt" style="background:var(--color-purple)" onclick="selectNewColor('purple')"
-                        id="new-col-purple"></div>
-                    <div class="new-color-opt" style="background:var(--color-cyan)" onclick="selectNewColor('cyan')"
-                        id="new-col-cyan"></div>
-                    <div class="new-color-opt" style="background:var(--color-lime)" onclick="selectNewColor('lime')"
-                        id="new-col-lime"></div>
-                    <div class="new-color-opt" style="background:var(--color-white)" onclick="selectNewColor('white')"
-                        id="new-col-white"></div>
+                    <div class="new-color-opt selected" style="background:var(--color-grey); margin-left: 10px;"
+                        onclick="selectNewColor('grey')" id="new-col-grey"></div>
                 </div>
+                <!-- Легенда цветов -->
+                <div class="color-legend">RED: 1 EPIC | YELLOW: 3 MEDIUM | GREEN: 5 QUICK</div>
             </div>
 
             <div class="list-title">АКТИВНЫЕ</div>
@@ -347,29 +336,13 @@
             <textarea id="edit-task-input" class="edit-textarea"></textarea>
             <div style="color:#aaa; font-size:0.8rem; margin-bottom:10px;">ЦВЕТ ОКАНТОВКИ</div>
             <div class="color-options">
-                <div class="color-opt" style="background:var(--color-grey)" onclick="selectColor('grey')" id="col-grey">
-                </div>
                 <div class="color-opt" style="background:var(--color-red)" onclick="selectColor('red')" id="col-red">
                 </div>
                 <div class="color-opt" style="background:var(--color-yellow)" onclick="selectColor('yellow')"
                     id="col-yellow"></div>
-                <div class="color-opt" style="background:var(--color-blue)" onclick="selectColor('blue')" id="col-blue">
-                </div>
                 <div class="color-opt" style="background:var(--color-green)" onclick="selectColor('green')"
                     id="col-green"></div>
-                <!-- NEW: 5 additional colors -->
-                <div class="color-opt" style="background:var(--color-orange)" onclick="selectColor('orange')"
-                    id="col-orange">
-                </div>
-                <div class="color-opt" style="background:var(--color-purple)" onclick="selectColor('purple')"
-                    id="col-purple">
-                </div>
-                <div class="color-opt" style="background:var(--color-cyan)" onclick="selectColor('cyan')" id="col-cyan">
-                </div>
-                <div class="color-opt" style="background:var(--color-lime)" onclick="selectColor('lime')" id="col-lime">
-                </div>
-                <div class="color-opt" style="background:var(--color-white)" onclick="selectColor('white')"
-                    id="col-white">
+                <div class="color-opt" style="background:var(--color-grey)" onclick="selectColor('grey')" id="col-grey">
                 </div>
             </div>
             <div class="modal-actions">

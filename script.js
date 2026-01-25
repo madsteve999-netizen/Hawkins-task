@@ -170,7 +170,7 @@ async function initializeApp() {
 
 let currentEditId = null;
 let selectedColor = 'red';
-let newSelectedColor = 'red';
+let newSelectedColor = 'grey';
 let currentFontSize = 1.1;
 let currentFontFamily = "'Courier New', Courier, monospace";
 let taskToDeleteId = null; // Глобальная переменная для удаления

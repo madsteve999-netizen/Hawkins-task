@@ -4,19 +4,11 @@
     --task-font-size: 1.1rem;
     --task-font-family: 'Courier New', Courier, monospace;
 
-    /* Original colors */
+    /* Task colors */
     --color-red: #ff0000;
     --color-yellow: #ffeb3b;
-    --color-blue: #1e00ff;
     --color-green: #067506;
     --color-grey: #666666;
-
-    /* NEW: 5 additional colors */
-    --color-orange: #ff9100;
-    --color-purple: #d500f9;
-    --color-cyan: #00e5ff;
-    --color-lime: #76ff03;
-    --color-white: #ffffff;
 }
 
 * {
@@ -711,24 +703,35 @@ body.chrono-mode .control-box {
     justify-content: flex-end;
     padding-right: 5px;
     margin-top: -20px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .new-color-opt {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     cursor: pointer;
-    border: 1px solid transparent;
-    opacity: 0.4;
-    transition: 0.2s;
+    border: 2px solid transparent;
+    opacity: 0.5;
+    transition: all 0.3s ease;
 }
 
 .new-color-opt.selected {
     opacity: 1;
-    transform: scale(1.2);
+    transform: scale(1.3);
     border-color: #fff;
-    box-shadow: 0 0 8px currentColor;
+    box-shadow: 0 0 15px currentColor, 0 0 25px currentColor;
+}
+
+/* Легенда цветов */
+.color-legend {
+    font-size: 0.7rem;
+    color: #666;
+    text-align: right;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    font-family: 'Courier New', monospace;
+    padding-right: 5px;
 }
 
 /* Списки */
@@ -752,45 +755,30 @@ ul {
     overflow: visible;
 }
 
+/* Приоритетные задачи с неоновым свечением */
 .task-item.border-red {
+    background: rgba(0, 0, 0, 0.7);
     border-left-color: var(--color-red);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.6), 0 0 30px rgba(255, 0, 0, 0.3), 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .task-item.border-yellow {
+    background: rgba(0, 0, 0, 0.7);
     border-left-color: var(--color-yellow);
-}
-
-.task-item.border-blue {
-    border-left-color: var(--color-blue);
+    box-shadow: 0 0 15px rgba(255, 235, 59, 0.6), 0 0 30px rgba(255, 235, 59, 0.3), 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .task-item.border-green {
+    background: rgba(0, 0, 0, 0.7);
     border-left-color: var(--color-green);
+    box-shadow: 0 0 15px rgba(6, 117, 6, 0.8), 0 0 30px rgba(6, 117, 6, 0.4), 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
+/* Серые задачи без свечения */
 .task-item.border-grey {
+    background: rgba(20, 20, 20, 0.85);
     border-left-color: var(--color-grey);
-}
-
-/* NEW: Border classes for 5 new colors */
-.task-item.border-orange {
-    border-left-color: var(--color-orange);
-}
-
-.task-item.border-purple {
-    border-left-color: var(--color-purple);
-}
-
-.task-item.border-cyan {
-    border-left-color: var(--color-cyan);
-}
-
-.task-item.border-lime {
-    border-left-color: var(--color-lime);
-}
-
-.task-item.border-white {
-    border-left-color: var(--color-white);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .task-text {
