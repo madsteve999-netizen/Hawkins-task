@@ -1924,7 +1924,7 @@ function initDrag() {
                     dragDebounceTimer = setTimeout(() => {
                         console.log('Syncing ALL tasks order after drag-and-drop');
                         updateTaskOrderInCloud(); // Update all tasks to sync order across devices
-                    }, 2000); // 2 second delay after user stops dragging
+                    }, 1500); // 2 second delay after user stops dragging
                 }
             }
         };
