@@ -1916,14 +1916,18 @@ function initDrag() {
                 // Re-render to apply auto-sorting for deferred list
                 render();
 
-                // CRITICAL FIX: Immediate cloud sync for moved task to prevent Realtime conflicts
+                // DEBOUNCED cloud sync: Wait 2 seconds after user stops dragging
+                // This prevents sending updates while user is still moving the task
                 if (currentUser && task) {
-                    // Immediately update the moved task in cloud
-                    updateTaskInCloud(taskId, {
-                        status: task.status,
-                        container_type: task.container_type,
-                        order_index: task.order_index
-                    });
+                    clearTimeout(dragDebounceTimer);
+                    dragDebounceTimer = setTimeout(() => {
+                        console.log('Syncing task after drag-and-drop:', taskId);
+                        updateTaskInCloud(taskId, {
+                            status: task.status,
+                            container_type: task.container_type,
+                            order_index: task.order_index
+                        });
+                    }, 2000); // 2 second delay after user stops dragging
                 }
             }
         };
@@ -2554,6 +2558,7 @@ function handleRealtimeEvent(payload) {
                 id: newRecord.id,
                 txt: newRecord.title,
                 status: status, // Use status instead of done
+                container_type: newRecord.container_type || (status === 'completed' ? 'archived' : 'today'), // NEW: Load container_type
                 color: newRecord.color || 'red',
                 order_index: newRecord.order_index || 0,
                 created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
@@ -2619,6 +2624,7 @@ function handleRealtimeEvent(payload) {
                 console.log('Updating existing task:', newRecord.id);
                 tasks[taskIndex].txt = newRecord.title;
                 tasks[taskIndex].status = status; // Use status instead of done
+                tasks[taskIndex].container_type = newRecord.container_type || (status === 'completed' ? 'archived' : 'today'); // NEW: Update container_type
                 tasks[taskIndex].color = newRecord.color || 'red';
                 tasks[taskIndex].order_index = newRecord.order_index || 0;
                 // Always update created_at from cloud if available
@@ -2633,6 +2639,7 @@ function handleRealtimeEvent(payload) {
                     id: newRecord.id,
                     txt: newRecord.title,
                     status: status, // Use status instead of done
+                    container_type: newRecord.container_type || (status === 'completed' ? 'archived' : 'today'), // NEW: Add container_type
                     color: newRecord.color || 'red',
                     order_index: newRecord.order_index || 0,
                     created_at: newRecord.created_at ? new Date(newRecord.created_at).getTime() : Date.now()
