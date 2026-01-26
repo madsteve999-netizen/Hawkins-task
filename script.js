@@ -2110,43 +2110,127 @@ function updateAuthUI(state) {
     }
 }
 
+// ========== NETWORK UTILITIES ==========
+/**
+ * Retry function with exponential backoff
+ * @param {Function} fn - Async function to retry
+ * @param {number} maxRetries - Maximum number of retry attempts
+ * @param {number} baseDelay - Base delay in milliseconds
+ * @returns {Promise} - Result of the function
+ */
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            const isLastAttempt = i === maxRetries - 1;
+            const isNetworkError = error.message.includes('Load failed') ||
+                error.message.includes('TIMEOUT') ||
+                error.message.includes('Failed to fetch') ||
+                error.message.includes('NetworkError') ||
+                error.name === 'TypeError';
+
+            if (isLastAttempt || !isNetworkError) {
+                throw error;
+            }
+
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = baseDelay * Math.pow(2, i);
+            console.log(`Retry attempt ${i + 1}/${maxRetries} after ${delay}ms for error:`, error.message);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+/**
+ * Check if browser is online
+ * @returns {boolean}
+ */
+function isOnline() {
+    return navigator.onLine;
+}
+
+/**
+ * Wait for online connection with timeout
+ * @param {number} timeout - Maximum time to wait in milliseconds
+ * @returns {Promise<boolean>} - True if online, false if timeout
+ */
+async function waitForOnline(timeout = 30000) {
+    if (isOnline()) return true;
+
+    return new Promise((resolve) => {
+        const timeoutId = setTimeout(() => {
+            window.removeEventListener('online', onlineHandler);
+            resolve(false);
+        }, timeout);
+
+        const onlineHandler = () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener('online', onlineHandler);
+            resolve(true);
+        };
+
+        window.addEventListener('online', onlineHandler);
+    });
+}
+
+// ========== LOGIN HANDLER ==========
 async function handleLogin() {
     if (!currentUser) return;
 
-    // Trigger synchronization with timeout protection
-    try {
-        // Wrap syncTasksOnLogin with timeout
-        const taskSyncTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TASK_SYNC_TIMEOUT')), 15000)
-        );
-        await Promise.race([syncTasksOnLogin(), taskSyncTimeout]);
-    } catch (error) {
-        console.error('Task sync error:', error);
-        if (error.message === 'TASK_SYNC_TIMEOUT') {
-            showToast('СИНХРОНИЗАЦИЯ ЗАДАЧ: ПРЕВЫШЕНО ВРЕМЯ ОЖИДАНИЯ');
-            hideSyncIndicator();
+    // Check network connection first
+    if (!isOnline()) {
+        showToast('НЕТ ПОДКЛЮЧЕНИЯ К СЕТИ');
+        const online = await waitForOnline();
+        if (!online) {
+            showToast('РАБОТА В АВТОНОМНОМ РЕЖИМЕ');
+            updateAuthUI();
+            return;
         }
+        showToast('ПОДКЛЮЧЕНИЕ ВОССТАНОВЛЕНО');
     }
 
     try {
-        // Wrap syncNotesOnLogin with timeout
-        const notesSyncTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('NOTES_SYNC_TIMEOUT')), 15000)
-        );
-        await Promise.race([syncNotesOnLogin(), notesSyncTimeout]);
+        // SEQUENTIAL SYNC: Tasks first (higher priority)
+        console.log('Starting task synchronization...');
+        await retryWithBackoff(async () => {
+            const taskSyncTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('TASK_SYNC_TIMEOUT')), 30000) // Increased to 30s
+            );
+            return await Promise.race([syncTasksOnLogin(), taskSyncTimeout]);
+        }, 3, 1000);
+
+        // SEQUENTIAL SYNC: Notes second
+        console.log('Starting notes synchronization...');
+        await retryWithBackoff(async () => {
+            const notesSyncTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('NOTES_SYNC_TIMEOUT')), 30000) // Increased to 30s
+            );
+            return await Promise.race([syncNotesOnLogin(), notesSyncTimeout]);
+        }, 3, 1000);
+
+        // Only subscribe to realtime after successful sync
+        console.log('Subscribing to realtime updates...');
+        subscribeToTasks();
+        subscribeToNotes();
+
+        updateAuthUI();
     } catch (error) {
-        console.error('Notes sync error:', error);
-        if (error.message === 'NOTES_SYNC_TIMEOUT') {
-            showToast('СИНХРОНИЗАЦИЯ ЗАМЕТОК: ПРЕВЫШЕНО ВРЕМЯ ОЖИДАНИЯ');
-            hideSyncIndicator();
+        console.error('Login sync error:', error);
+
+        // User-friendly error messages
+        if (error.message.includes('TIMEOUT')) {
+            showToast('СИНХРОНИЗАЦИЯ: ПРЕВЫШЕНО ВРЕМЯ ОЖИДАНИЯ');
+        } else if (error.message.includes('Load failed') || error.message.includes('Failed to fetch')) {
+            showToast('ОШИБКА СЕТИ: РАБОТА В АВТОНОМНОМ РЕЖИМЕ');
+        } else {
+            showToast('ОШИБКА СИНХРОНИЗАЦИИ: РАБОТА В АВТОНОМНОМ РЕЖИМЕ');
         }
+
+        hideSyncIndicator();
+        updateAuthUI();
+        // App continues to work with local data
     }
-
-    // Subscribe to realtime updates
-    subscribeToTasks();
-    subscribeToNotes();
-
-    updateAuthUI();
 }
 
 // ========== DEDUPLICATION UTILITY ==========
@@ -2265,7 +2349,8 @@ async function updateTaskOrderInCloud(excludeTaskId = null) {
     // CRITICAL: NO showSyncIndicator() here - it blocks drag-and-drop!
     // Sync happens silently in background
 
-    try {
+    // Wrap in retry logic for network resilience
+    await retryWithBackoff(async () => {
         // CRITICAL FIX: Filter out the excluded task (newly added) to avoid duplicates
         const tasksToUpdate = excludeTaskId
             ? tasks.filter(t => String(t.id) !== String(excludeTaskId))
@@ -2297,11 +2382,10 @@ async function updateTaskOrderInCloud(excludeTaskId = null) {
         if (error) throw error;
 
         console.log('Batch order update complete');
-    } catch (error) {
-        console.error('Update Order Error:', error);
-        // Don't show toast on background sync errors - it's annoying
-        // Only log to console
-    }
+    }, 2, 500).catch(error => {
+        // Silently log errors - don't show toast on background sync errors
+        console.error('Update Order Error (after retries):', error);
+    });
     // CRITICAL: NO hideSyncIndicator() here - sync is non-blocking
 }
 
