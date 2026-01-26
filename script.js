@@ -2197,6 +2197,10 @@ async function waitForOnline(timeout = 30000) {
 async function handleLogin() {
     if (!currentUser) return;
 
+    // CRITICAL: Reset realtime failure count on login
+    realtimeFailureCount = 0;
+    isRealtimeWorking = false;
+
     // Check network connection first
     if (!isOnline()) {
         showToast('НЕТ ПОДКЛЮЧЕНИЯ К СЕТИ');
@@ -2620,7 +2624,7 @@ function subscribeToTasks() {
 
             if (status === 'CHANNEL_ERROR') {
                 console.error('Realtime channel error:', err);
-                handleRealtimeError(err, 'tasks subscription');
+                // Don't auto-switch to polling - let user manually trigger if needed
             } else if (status === 'SUBSCRIBED') {
                 console.log('Successfully subscribed to task updates');
                 // Сбрасываем счетчик ошибок при успешной подписке
@@ -2633,7 +2637,7 @@ function subscribeToTasks() {
                 isRealtimeWorking = false;
             } else if (status === 'TIMED_OUT') {
                 console.warn('Realtime subscription timed out');
-                handleRealtimeError(new Error('TIMED_OUT'), 'tasks subscription');
+                // Don't auto-switch to polling
             }
         });
 }
