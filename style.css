@@ -1490,23 +1490,40 @@ body.void-mode #completed-section {
     display: none !important;
 }
 
-/* Скрываем все активные задачи кроме первой */
-body.void-mode #active-list li:not(:first-child) {
-    display: none;
+/* --- VOID MODE --- */
+/* В режиме VOID приглушаем все задачи кроме первой из списка СЕГОДНЯ */
+
+/* Приглушаем ВСЕ задачи в режиме VOID */
+body.void-mode .task-item {
+    opacity: 0;
+    filter: blur(2px);
+    transform: scale(0.95);
+    transition: all 0.5s ease;
 }
 
-/* Увеличиваем и подсвечиваем первую задачу */
-body.void-mode #active-list li:first-child {
+/* Выделяем ПЕРВУЮ задачу из списка СЕГОДНЯ */
+body.void-mode #today-list li:first-child {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: scale(1.15) !important;
     font-size: 1.3rem;
     box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
     border-left-width: 6px;
     transition: all 0.5s ease;
     margin-bottom: 30px;
+    justify-content: center;
+    padding-right: 15px;
+    align-items: center;
+    position: relative;
+    display: flex !important;
 }
 
-body.void-mode #active-list li:first-child .task-text {
+body.void-mode #today-list li:first-child .task-text {
     font-size: 1.3em;
     text-shadow: 3px 3px 0 #000, 0 0 15px rgba(255, 0, 0, 0.3);
+    flex: 0 1 auto;
+    text-align: center;
+    max-width: fit-content;
 }
 
 /* Центрируем workspace в режиме void */
@@ -1536,56 +1553,38 @@ body.void-mode .timer-digits {
 /* --- ДОПОЛНЕНИЕ ДЛЯ VOID РЕЖИМА (ЦЕНТРОВКА) --- */
 
 /* 1. Скрываем кнопки (карандаш и крестик) у активной задачи */
-body.void-mode #active-list li:first-child .btn-action,
-body.void-mode #active-list li:first-child .btn-menu,
-body.void-mode #active-list li:first-child .task-age {
+body.void-mode #today-list li:first-child .btn-action,
+body.void-mode #today-list li:first-child .btn-menu,
+body.void-mode #today-list li:first-child .task-age {
     display: none !important;
 }
 
-/* 2. Центрируем саму плашку задачи */
-body.void-mode #active-list li:first-child {
-    justify-content: center;
-    padding-right: 15px;
-    align-items: center;
-    position: relative;
-    display: flex !important;
-    /* Force display for first child */
-}
-
-/* 3. Force Checkbox Visibility and Style */
-body.void-mode #active-list li:first-child .checkbox {
+/* 2. Force Checkbox Visibility and Style */
+body.void-mode #today-list li:first-child .checkbox {
     display: flex !important;
     margin-right: 25px;
     transform: scale(1.5);
-    /* Make it bigger for void mode */
     border-color: var(--red);
     box-shadow: 0 0 10px var(--red);
-    /* PREVENT SQUASHING */
     flex-shrink: 0;
     width: 26px;
     min-width: 26px;
     margin-left: 12px;
-    /* Move slightly right from the border */
 }
 
-/* 4. Убираем "растягивание" текста, чтобы он прижался к центру */
-body.void-mode #active-list li:first-child .task-text {
-    flex: 0 1 auto;
-    /* Allow shrinking but not growing infinitely */
-    text-align: center;
-    max-width: fit-content;
-}
-
-/* 5. FIX: Ensure all other tasks are hidden */
-body.void-mode #active-list li:not(:first-child) {
-    display: none !important;
-}
-
-/* 6. Hide other lists just in case */
+/* 3. Скрываем остальные списки в режиме VOID */
+body.void-mode #tomorrow-list,
+body.void-mode #after-tomorrow-list,
 body.void-mode #deferred-section,
 body.void-mode #completed-section {
     display: none !important;
 }
+
+/* 4. Скрываем заголовки других списков */
+body.void-mode .list-title:not(:first-of-type) {
+    display: none !important;
+}
+
 
 
 /* --- POPUP FOR LONG TASKS --- */
