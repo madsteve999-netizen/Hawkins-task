@@ -1790,7 +1790,54 @@ function render() {
     afterTomorrowList.appendChild(afterTomorrowFragment);
     def.appendChild(defFragment);
     com.appendChild(comFragment);
+
+    // Update task counters
+    updateCounters();
 }
+
+/**
+ * Обновляет счетчики задач для каждого временного контейнера
+ * Подсчитывает количество красных, желтых и зеленых задач
+ */
+function updateCounters() {
+    // Определяем контейнеры для подсчета
+    const containers = [
+        { type: 'today', prefix: 'counter-today' },
+        { type: 'tomorrow', prefix: 'counter-tomorrow' },
+        { type: 'after_tomorrow', prefix: 'counter-after-tomorrow' }
+    ];
+
+    containers.forEach(container => {
+        // Фильтруем задачи по контейнеру
+        const containerTasks = tasks.filter(t => t.container_type === container.type);
+
+        // Подсчитываем задачи по цветам
+        const redCount = containerTasks.filter(t => t.color === 'red').length;
+        const yellowCount = containerTasks.filter(t => t.color === 'yellow').length;
+        const greenCount = containerTasks.filter(t => t.color === 'green').length;
+
+        // Обновляем DOM-элементы
+        const redEl = document.getElementById(`${container.prefix}-red`);
+        const yellowEl = document.getElementById(`${container.prefix}-yellow`);
+        const greenEl = document.getElementById(`${container.prefix}-green`);
+
+        if (redEl) {
+            redEl.textContent = redCount;
+            redEl.classList.toggle('zero', redCount === 0);
+        }
+
+        if (yellowEl) {
+            yellowEl.textContent = yellowCount;
+            yellowEl.classList.toggle('zero', yellowCount === 0);
+        }
+
+        if (greenEl) {
+            greenEl.textContent = greenCount;
+            greenEl.classList.toggle('zero', greenCount === 0);
+        }
+    });
+}
+
 
 
 function setCh(idx) {

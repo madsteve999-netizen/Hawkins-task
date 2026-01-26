@@ -1036,6 +1036,45 @@ ul {
     font-weight: bold;
 }
 
+/* Task Counters */
+.task-counters {
+    display: inline-block;
+    margin-left: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    font-weight: normal;
+}
+
+.task-counters span[class^="counter-"] {
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+/* Counter colors with neon glow */
+.counter-red {
+    color: var(--color-red);
+    text-shadow: 0 0 8px rgba(255, 0, 0, 0.8), 0 0 12px rgba(255, 0, 0, 0.5);
+}
+
+.counter-yellow {
+    color: var(--color-yellow);
+    text-shadow: 0 0 8px rgba(255, 235, 59, 0.8), 0 0 12px rgba(255, 235, 59, 0.5);
+}
+
+.counter-green {
+    color: var(--color-green);
+    text-shadow: 0 0 8px rgba(6, 117, 6, 0.9), 0 0 12px rgba(6, 117, 6, 0.6);
+}
+
+/* Dim style for zero values */
+.task-counters span[class^="counter-"].zero {
+    color: #444;
+    text-shadow: none;
+    opacity: 0.5;
+}
+
+
 #completed-list {
     margin-top: 50px;
     padding-top: 30px;
