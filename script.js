@@ -1849,8 +1849,14 @@ function toggleAudio() {
     }
 }
 
+
 // Debounce timer for drag-and-drop cloud sync
 let dragDebounceTimer = null;
+// Flag to prevent concurrent order updates
+let isUpdatingOrder = false;
+// Flag to track if we need to update after current request completes
+let hasPendingUpdate = false;
+
 
 function initDrag() {
     if (typeof Sortable !== 'undefined') {
@@ -2355,6 +2361,17 @@ async function updateTaskOrderInCloud(excludeTaskId = null) {
         return;
     }
 
+    // CRITICAL: Prevent concurrent updates - mark as pending if already updating
+    if (isUpdatingOrder) {
+        console.log('Skipping order update: already in progress, marking as pending');
+        hasPendingUpdate = true; // Mark that we need to update after current request
+        return;
+    }
+
+    // Set flag to prevent concurrent updates
+    isUpdatingOrder = true;
+    hasPendingUpdate = false; // Clear pending flag as we're processing now
+
     try {
         // CRITICAL FIX: Filter out the excluded task (newly added) to avoid duplicates
         const tasksToUpdate = excludeTaskId
@@ -2402,6 +2419,17 @@ async function updateTaskOrderInCloud(excludeTaskId = null) {
         // If it's a network error, the next drag-and-drop will retry naturally
         if (error.message === 'BATCH_UPDATE_TIMEOUT') {
             console.warn('Batch update timed out - will retry on next change');
+        }
+    } finally {
+        // CRITICAL: Always reset flag, even if error occurred
+        isUpdatingOrder = false;
+
+        // CRITICAL: If there was a pending update while we were processing, trigger it now
+        if (hasPendingUpdate) {
+            console.log('Processing pending update...');
+            hasPendingUpdate = false;
+            // Use setTimeout to avoid blocking and allow UI to update
+            setTimeout(() => updateTaskOrderInCloud(excludeTaskId), 100);
         }
     }
     // CRITICAL: NO hideSyncIndicator() here - sync is non-blocking
@@ -2559,8 +2587,18 @@ function subscribeToTasks() {
                 handleRealtimeEvent(payload);
             }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
             console.log('Realtime subscription status:', status);
+
+            if (status === 'CHANNEL_ERROR') {
+                console.error('Realtime channel error:', err);
+                // Don't auto-reconnect immediately - let Supabase handle it
+                // User can manually refresh if needed
+            } else if (status === 'SUBSCRIBED') {
+                console.log('Successfully subscribed to task updates');
+            } else if (status === 'CLOSED') {
+                console.log('Realtime channel closed');
+            }
         });
 }
 
@@ -2593,8 +2631,17 @@ function subscribeToNotes() {
                 handleNotesRealtimeEvent(payload);
             }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
             console.log('Notes Realtime subscription status:', status);
+
+            if (status === 'CHANNEL_ERROR') {
+                console.error('Notes realtime channel error:', err);
+                // Don't auto-reconnect immediately - let Supabase handle it
+            } else if (status === 'SUBSCRIBED') {
+                console.log('Successfully subscribed to notes updates');
+            } else if (status === 'CLOSED') {
+                console.log('Notes realtime channel closed');
+            }
         });
 }
 
