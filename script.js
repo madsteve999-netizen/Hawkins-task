@@ -10,6 +10,9 @@ let pendingEmail = '';
 
 // Initialize Supabase after page loads
 function initSupabase() {
+    // Prevent multiple instances (Singleton pattern)
+    if (supabaseClient) return;
+
     try {
         if (window.supabase) {
             const supabaseUrl = 'https://jiovbimhoitawrtkqxmp.supabase.co';
