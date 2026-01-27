@@ -3117,6 +3117,12 @@ function updatePopupPosition(event, popup) {
     // Desktop: Follow cursor with offset
     if (!event) return;
 
+    // Fix for "Cannot read properties of undefined (reading 'offsetWidth')"
+    if (!popup) {
+        popup = document.getElementById('task-detail-popup');
+    }
+    if (!popup) return;
+
     // Add offset
     const offset = 15; // px
     let left = event.clientX + offset;
