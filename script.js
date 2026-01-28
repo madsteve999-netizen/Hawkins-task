@@ -2028,7 +2028,16 @@ function updateCounters() {
 
     containers.forEach(container => {
         // Фильтруем задачи по контейнеру
-        const containerTasks = tasks.filter(t => t.container_type === container.type);
+        let containerTasks = tasks.filter(t => t.container_type === container.type);
+
+        // FIX: For PLANS (tomorrow), only count tasks BEFORE the first separator
+        // This ensures the header counters only reflect "Immediate Plans" (not dated ones)
+        if (container.type === 'tomorrow') {
+            const separatorIndex = containerTasks.findIndex(t => t.txt.startsWith('---'));
+            if (separatorIndex !== -1) {
+                containerTasks = containerTasks.slice(0, separatorIndex);
+            }
+        }
 
         // Подсчитываем задачи по цветам
         const redCount = containerTasks.filter(t => t.color === 'red').length;
