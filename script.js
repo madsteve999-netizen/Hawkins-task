@@ -35,7 +35,7 @@ function initSupabase() {
 
 // ========== AUDIO LAZY LOADING ==========
 const AUDIO_URLS = {
-    vecna: 'https://www.myinstants.com/media/sounds/stranger-things-vecna-grandfather-clock.mp3',
+    vecna: '/sound/stranger-things-vecna-grandfather-clock.mp3',
     gong: 'undertakers-bell-1.mp3'
 };
 
@@ -356,11 +356,11 @@ const STATIONS = {
         "https://hawkins-task.vercel.app/Cutting_Crew_-_Died_In_Your_Arms_48076414.mp3"
     ],
     LAB: [
-        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Dreamlight.mp3',
-        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Groovy.mp3',
-        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Jurisprudence.mp3',
+        'https://www.dropbox.com/scl/fi/noaqs9y2ry72u7wf9ko2w/30_min_focus_Dreamlight.mp3?rlkey=lksjsgwyqgppqal7ivocmcd30&st=p6vsakob&raw=1',
+        'https://www.dropbox.com/scl/fi/9701bsjafo01ihloleabl/30_min_focus_Groovy.mp3?rlkey=2z47eeuwhce7nt9xcjgxeykoc&st=oagnmhb9&raw=1',
+        'https://www.dropbox.com/scl/fi/4dm8bq4w7i62v8m311lxx/30_min_focus_Jurisprudence.mp3?rlkey=f7dlta18sjswpc4sf79pjguvc&st=me9lq5k7&raw=1',
         'https://www.dropbox.com/scl/fi/kxyoy9gzhas137sxlv39h/Coding_Music.mp3?rlkey=cs6fqinga8mmgpa39nvsqrkij&st=0czze8yn&raw=1',
-        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/Hyperfocus.mp3'
+        'https://www.dropbox.com/scl/fi/8y8azu056fxtqt3eeu0kl/Hyperfocus.mp3?rlkey=yogdpbgukacj4v4yo6jmczj89&st=f9471qx5&raw=1'
     ]
 };
 
