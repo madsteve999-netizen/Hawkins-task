@@ -1,8 +1,0 @@
-{
-    "rewrites": [
-        {
-            "source": "/lab-music/:match*",
-            "destination": "https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/:match*"
-        }
-    ]
-}
