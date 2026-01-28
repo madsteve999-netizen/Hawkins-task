@@ -359,7 +359,7 @@ const STATIONS = {
         'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Dreamlight.mp3',
         'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Groovy.mp3',
         'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Jurisprudence.mp3',
-        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/Coding_Music.mp3',
+        'https://www.dropbox.com/scl/fi/kxyoy9gzhas137sxlv39h/Coding_Music.mp3?rlkey=cs6fqinga8mmgpa39nvsqrkij&st=0czze8yn&raw=1',
         'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/Hyperfocus.mp3'
     ]
 };
