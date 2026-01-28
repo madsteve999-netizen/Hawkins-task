@@ -43,13 +43,26 @@
 
             <!-- БЛОК РАДИО -->
             <div class="control-box" id="radio-control-box">
-                <div class="radio-header collapsed" onclick="toggleRadioPanel()">
-                    📡 ЧАСТОТЫ ЭФИРА
-                    <svg viewBox="0 0 24 24">
-                        <path d="M6 9l6 6 6-6" />
-                    </svg>
+                <div class="radio-header-wrapper" id="radio-header-wrapper">
+                    <div class="radio-center-container">
+                        <!-- Mode Toggle Switch -->
+                        <!-- Mode Toggle Switch -->
+                        <div class="radio-mode-switch">
+                            <span id="mode-fm" class="mode-opt active" onclick="setRadioMode('fm')">FM</span>
+                            <span class="mode-sep">/</span>
+                            <span id="mode-lab" class="mode-opt" onclick="setRadioMode('lab')">LAB</span>
+                        </div>
+
+                        <!-- Collapse Arrow (New Location) -->
+                        <div class="radio-collapse-arrow collapsed" id="radio-collapse-btn"
+                            onclick="toggleRadioPanel()">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
-                <div class="radio-content hidden">
+                <div class="radio-content hidden" id="radio-playlist-container">
                     <div class="channel-row">
                         <div class="ch-btn active" onclick="setCh(0)">1</div>
                         <div class="ch-btn" onclick="setCh(1)">2</div>
@@ -57,7 +70,7 @@
                         <div class="ch-btn" onclick="setCh(3)">4</div>
                         <div class="ch-btn" onclick="setCh(4)">5</div>
                     </div>
-                    <div class="channel-row">
+                    <div class="channel-row" id="channels-row-2">
                         <div class="ch-btn" onclick="setCh(5)">6</div>
                         <div class="ch-btn" onclick="setCh(6)">7</div>
                         <div class="ch-btn" onclick="setCh(7)">8</div>

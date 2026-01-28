@@ -224,6 +224,8 @@ async function initializeApp() {
         // Render UI AFTER rotation
         render();
 
+        initRadioMode(); // Initialize Radio Mode
+
         // Try to check auth state with timeout
         if (supabaseClient && !isOfflineMode) {
             const authPromise = supabaseClient.auth.getSession();
@@ -338,6 +340,141 @@ const songs = [
     "https://hawkins-task.vercel.app/Cutting_Crew_-_Died_In_Your_Arms_48076414.mp3"
 ];
 let curCh = 0;
+let currentRadioMode = localStorage.getItem('stas_radio_mode') || 'fm';
+
+const STATIONS = {
+    FM: [
+        "https://hawkins-task.vercel.app/LOrchestra_Cinematique_Michael_Stein_Kyle_Dixon_-_Stranger_Things_Main_Theme_53151697.mp3",
+        "https://hawkins-task.vercel.app/Michael_Stein_Kyle_Dixon_-_Kids_50273473.mp3",
+        "https://hawkins-task.vercel.app/Kate_Bush_-_Running_Up_That_Hill_A_Deal_With_God_48002274.mp3",
+        "https://hawkins-task.vercel.app/Journey_-_Separate_Ways_Worlds_Apart_48054280.mp3",
+        "https://hawkins-task.vercel.app/Scorpions_-_Rock_You_Like_a_Hurricane_47954772.mp3",
+        "https://hawkins-task.vercel.app/Bon_Jovi_-_Runaway_47852333.mp3",
+        "https://hawkins-task.vercel.app/The_Clash_-_Should_I_Stay_or_Should_I_Go_47992439.mp3",
+        "https://hawkins-task.vercel.app/The_Police_-_Every_Breath_You_Take_47835969.mp3",
+        "https://hawkins-task.vercel.app/Foreigner_-_Cold_As_Ice_47969496.mp3",
+        "https://hawkins-task.vercel.app/Cutting_Crew_-_Died_In_Your_Arms_48076414.mp3"
+    ],
+    LAB: [
+        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Dreamlight.mp3',
+        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Groovy.mp3',
+        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/30_min_focus_Jurisprudence.mp3',
+        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/Coding_Music.mp3',
+        'https://github.com/madsteve999-netizen/Hawkins-task/releases/download/music-v1/Hyperfocus.mp3'
+    ]
+};
+
+function initRadioMode() {
+    if (!STATIONS[currentRadioMode.toUpperCase()]) {
+        currentRadioMode = 'fm';
+    }
+    setRadioMode(currentRadioMode, false);
+    // Force panel to be hidden on init
+    const content = document.getElementById('radio-playlist-container');
+    const arrow = document.getElementById('radio-collapse-btn');
+    if (content) content.classList.add('hidden');
+    if (arrow) arrow.classList.add('collapsed');
+}
+
+function setRadioMode(mode, stopMusic = true) {
+    // Normalize modes to lowercase for reliable comparison
+    const normMode = String(mode).toLowerCase().trim();
+    const normCurrent = String(currentRadioMode).toLowerCase().trim();
+
+    console.log(`setRadioMode: requested=${normMode}, current=${normCurrent}, stopMusic=${stopMusic}`);
+
+    // If clicking the SAME mode that is already active, just toggle the panel visibility
+    if (stopMusic && normCurrent === normMode) {
+        console.log("Mode matches current -> toggling panel");
+        toggleRadioPanel();
+        return;
+    }
+
+    currentRadioMode = normMode; // Save as lowercase
+    localStorage.setItem('stas_radio_mode', normMode);
+
+    const isLab = (normMode === 'lab');
+    const radioBox = document.getElementById('radio-control-box');
+    const fmBtn = document.getElementById('mode-fm');
+    const labBtn = document.getElementById('mode-lab');
+    const chRow2 = document.getElementById('channels-row-2');
+
+    // 1. Expand Panel automatically ONLY when manually switching modes (stopMusic = true)
+    if (stopMusic) {
+        const content = document.getElementById('radio-playlist-container');
+        const arrow = document.getElementById('radio-collapse-btn');
+        if (content && content.classList.contains('hidden')) {
+            console.log("Auto-opening panel on mode switch");
+            content.classList.remove('hidden');
+        }
+        if (arrow && arrow.classList.contains('collapsed')) {
+            arrow.classList.remove('collapsed');
+        }
+    }
+
+    // 2. Update UI Classes
+    if (isLab) {
+        if (radioBox) radioBox.classList.add('lab-mode');
+        if (fmBtn) fmBtn.classList.remove('active');
+        if (labBtn) labBtn.classList.add('active');
+        if (chRow2) chRow2.style.display = 'none'; // Hide channels 6-10
+    } else {
+        if (radioBox) radioBox.classList.remove('lab-mode');
+        if (fmBtn) fmBtn.classList.add('active');
+        if (labBtn) labBtn.classList.remove('active');
+        if (chRow2) chRow2.style.display = 'grid'; // Show channels 6-10
+    }
+
+    // 3. Handle Audio Reset
+    if (stopMusic) {
+        const audio = document.getElementById("audio");
+        const btn = document.getElementById("play-btn");
+
+        if (audio && !audio.paused) {
+            audio.pause();
+            if (btn) {
+                btn.classList.remove("playing");
+                btn.innerText = "НАЧАТЬ ЭФИР";
+            }
+            document.body.classList.remove("music-active");
+            if (typeof stopThunderLoop === 'function') stopThunderLoop();
+        }
+
+        curCh = 0;
+        const playlist = STATIONS[currentRadioMode.toUpperCase()];
+        if (audio && playlist && playlist[0]) {
+            audio.src = playlist[0];
+            audio.load();
+        }
+
+        updateActiveChannelUI();
+    }
+}
+
+function updateActiveChannelUI() {
+    document.querySelectorAll('.ch-btn').forEach((b, i) => b.classList.toggle('active', i === curCh));
+}
+
+function toggleRadioPanel() {
+    const content = document.getElementById('radio-playlist-container');
+    const arrow = document.getElementById('radio-collapse-btn');
+
+    if (content) {
+        if (content.classList.contains('hidden')) {
+            // OPEN
+            console.log("Opening radio panel");
+            content.classList.remove('hidden');
+            if (arrow) arrow.classList.remove('collapsed');
+        } else {
+            // CLOSE
+            console.log("Closing radio panel");
+            content.classList.add('hidden');
+            if (arrow) arrow.classList.add('collapsed');
+        }
+    } else {
+        console.error('Radio content container #radio-playlist-container not found!');
+    }
+}
 
 // const sfxClick = new Audio("2571-preview.mp3"); // Отключено: файл не нужен
 const sfxDel = new Audio("2857-preview.mp3");
@@ -981,13 +1118,9 @@ async function executeDelete(id) {
 }
 
 // === RADIO PANEL TOGGLE ===
-function toggleRadioPanel() {
-    const header = document.querySelector('.radio-header');
-    const content = document.querySelector('.radio-content');
+// === RADIO PANEL TOGGLE (Duplicate removed) ===
+// Function is defined earlier in the file.
 
-    header.classList.toggle('collapsed');
-    content.classList.toggle('hidden');
-}
 
 // === BURN ARCHIVE MODAL ===
 function openBurnModal() {
@@ -2102,15 +2235,21 @@ function updateCounters() {
 
 
 function setCh(idx) {
+    const playlist = STATIONS[currentRadioMode.toUpperCase()];
+    if (!playlist || idx >= playlist.length) return;
+
     curCh = idx;
     const au = document.getElementById('audio');
-
     const btn = document.getElementById('play-btn');
     const isPlaying = btn.classList.contains('playing');
 
     au.pause();
 
-    au.src = songs[idx];
+    // Set source
+    au.src = playlist[idx];
+
+    // CRITICAL: Force load ensures the new source is ready
+    au.load();
 
     if (isPlaying) {
         const playPromise = au.play();
@@ -2121,8 +2260,9 @@ function setCh(idx) {
         }
     }
 
-    document.querySelectorAll('.ch-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
-    playSfx('click');
+    updateActiveChannelUI();
+
+    if (typeof playSfx === 'function') playSfx('click');
 }
 
 function toggleAudio() {

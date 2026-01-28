@@ -274,39 +274,90 @@ body.invoking .header h2 {
 }
 
 /* Radio Collapsible Panel */
-.radio-header {
-    cursor: pointer;
-    padding: 10px;
-    margin: -15px -15px 15px -15px;
+/* Radio Collapsible Panel */
+.radio-header-wrapper {
+    padding: 4px 10px;
+    margin: -15px -15px 10px -15px;
     border-bottom: 2px solid var(--dark-red);
-    color: var(--red);
-    font-weight: bold;
-    font-size: 0.9rem;
-    text-align: center;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    transition: 0.2s;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    position: relative;
+}
+
+.radio-center-container {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: rgba(0, 0, 0, 0.3);
 }
 
-.radio-header:hover {
-    border-bottom-color: var(--red);
-    text-shadow: 0 0 8px var(--red);
+/* New Styles for Mode Switch within Radio Header */
+.radio-mode-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--red);
+    user-select: none;
+    z-index: 11;
+    /* Ensure clickable above wrapper */
 }
 
-.radio-header svg {
-    width: 16px;
-    height: 16px;
-    fill: currentColor;
+.radio-mode-switch .mode-opt {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+    padding: 2px 5px;
+}
+
+.radio-mode-switch .mode-opt.active {
+    opacity: 1;
+    text-shadow: 0 0 10px var(--red);
+    text-decoration: none;
+}
+
+.radio-mode-switch .mode-opt:hover {
+    opacity: 0.8;
+}
+
+.radio-mode-switch .mode-sep {
+    opacity: 0.5;
+}
+
+/* NEW ARROW STYLES */
+.radio-collapse-arrow {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    color: var(--red);
+    transition: all 0.3s ease;
+    border-radius: 50%;
+}
+
+.radio-collapse-arrow:hover {
+    background: rgba(255, 0, 0, 0.1);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+}
+
+.radio-collapse-arrow svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
     transition: transform 0.3s ease;
+    transform: rotate(180deg);
+    /* Default: Open (Up) */
 }
 
-.radio-header.collapsed svg {
-    transform: rotate(-90deg);
+/* When collapsed (list hidden), rotate to point down */
+.radio-collapse-arrow.collapsed svg {
+    transform: rotate(0deg);
 }
 
 .radio-content {
@@ -317,8 +368,12 @@ body.invoking .header h2 {
 }
 
 .radio-content.hidden {
-    max-height: 0;
-    opacity: 0;
+    max-height: 0 !important;
+    opacity: 0 !important;
+    padding: 0 15px !important;
+    /* Force padding 0 to prevent layout shift */
+    margin: 0 !important;
+    /* Force margin 0 */
 }
 
 /* --- ТАЙМЕР --- */
@@ -2044,4 +2099,117 @@ body.void-mode .list-title:not(:first-of-type) {
 .sep-val.zero {
     color: #555;
     opacity: 0.5;
+}
+
+/* === RADIO Header & Toggle === */
+.radio-header-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 10px 12px 10px;
+    /* Reduced top padding to balance visuals */
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 2px solid var(--dark-red);
+    margin: -15px -15px 15px -15px;
+    position: relative;
+    transition: 0.2s;
+}
+
+.radio-header-wrapper:hover {
+    border-bottom-color: var(--red);
+}
+
+.radio-center-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    /* Space between switch and arrow */
+}
+
+/* Toggle Switch */
+.radio-mode-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Courier New", monospace;
+    font-size: 1.4rem;
+    /* Larger text */
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.mode-opt {
+    cursor: pointer;
+    color: #444;
+    transition: all 0.3s ease;
+}
+
+.mode-sep {
+    color: #444;
+}
+
+.mode-opt.active {
+    color: var(--color-red);
+    text-shadow: 0 0 10px var(--color-red);
+}
+
+/* Collapse Arrow */
+.radio-collapse-arrow {
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: var(--color-red);
+    stroke-width: 3;
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 0 5px var(--color-red));
+}
+
+.radio-collapse-arrow.collapsed {
+    transform: rotate(-90deg);
+}
+
+/* === LAB MODE (Cyan Theme) === */
+.control-box.lab-mode {
+    border-color: #00e5ff;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 20px rgba(0, 229, 255, 0.1);
+}
+
+.control-box.lab-mode .radio-header-wrapper {
+    border-bottom-color: rgba(0, 229, 255, 0.3);
+}
+
+.control-box.lab-mode .mode-opt.active {
+    color: #00e5ff;
+    text-shadow: 0 0 10px #00e5ff;
+}
+
+.control-box.lab-mode .radio-collapse-arrow {
+    stroke: #00e5ff;
+    filter: drop-shadow(0 0 5px #00e5ff);
+}
+
+/* LAB buttons */
+.control-box.lab-mode .ch-btn {
+    border-color: #00e5ff;
+    color: #00e5ff;
+}
+
+.control-box.lab-mode .ch-btn.active {
+    background: #00e5ff;
+    color: #000;
+    box-shadow: 0 0 15px #00e5ff;
+}
+
+.control-box.lab-mode .play-btn {
+    border-color: #00e5ff;
+    color: #00e5ff;
+}
+
+/* Fix Play Button readability in LAB mode */
+.control-box.lab-mode .play-btn.playing {
+    background: #00e5ff;
+    color: #000 !important;
+    /* Force black text */
+    box-shadow: 0 0 20px #00e5ff;
 }
